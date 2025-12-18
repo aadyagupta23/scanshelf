@@ -1,15 +1,4 @@
-/**
- * scanshelf - AI Book Discovery Application
- * 
- * Copyright (c) 2025 scanshelf. All rights reserved.
- * 
- * This software is proprietary. Unauthorized commercial use, reproduction,
- * or distribution is strictly prohibited and may result in legal action.
- * 
- * Source available for reference and educational purposes only.
- * 
- * For licensing inquiries: yoboii5536@gmail.com
- */
+
 
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
