@@ -2,7 +2,7 @@
 
 > Turn any bookshelf into smart recommendations — instantly.
 
-scanshelf identifies books from a single photo and delivers **personalized recommendations with clear reasoning**. No accounts, no friction — just scan, discover, and decide.
+scanshelf identifies books from a single photo and delivers **personalized recommendations**. No accounts, no friction — just scan, discover, and decide.
 
 ---
 
