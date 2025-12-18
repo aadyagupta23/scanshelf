@@ -48,7 +48,7 @@ export default function Navbar({ sidebarOpen, toggleSidebar, toggleContact }: Na
               >
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
               </svg>
-              <span className="text-lg font-medium text-gray-900 dark:text-white">ShelfScanner</span>
+              <span className="text-lg font-medium text-gray-900 dark:text-white">Scanshelf</span>
             </Link>
           </div>
           

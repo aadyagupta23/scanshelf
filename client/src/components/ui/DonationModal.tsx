@@ -14,7 +14,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
   const handleDonate = () => {
     // Open PayPal donation link in new tab
     window.open(
-      "https://www.paypal.com/donate/?business=S8Z878CBE5F3U&no_recurring=0&item_name=Thanks+for+supporting+ShelfScanner%21&currency_code=USD",
+      "https://www.paypal.com/donate/?business=S8Z878CBE5F3U&no_recurring=0&item_name=Thanks+for+supporting+Scanshelf%21&currency_code=USD",
       "_blank",
       "noopener,noreferrer"
     );
@@ -40,7 +40,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
             </div>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Support ShelfScanner
+            Support Scanshelf
           </h2>
           <p className="text-gray-600 dark:text-gray-300 text-sm">
             Help us keep the book recommendations flowing! ✨
@@ -59,7 +59,7 @@ export default function DonationModal({ isOpen, onClose }: DonationModalProps) {
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
               Your support helps us maintain our servers, improve our AI recommendations, 
-              and keep ShelfScanner free for book lovers everywhere! 📚
+              and keep Scanshelf free for book lovers everywhere! 📚
             </p>
           </div>
 
