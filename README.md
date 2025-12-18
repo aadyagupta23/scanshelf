@@ -1,8 +1,8 @@
-# ShelfScanner 📚
+# Scanshelf 📚
 
 > Turn any bookshelf into smart recommendations — instantly.
 
-ShelfScanner identifies books from a single photo and delivers **personalized recommendations with clear reasoning**. No accounts, no friction — just scan, discover, and decide.
+scanshelf identifies books from a single photo and delivers **personalized recommendations with clear reasoning**. No accounts, no friction — just scan, discover, and decide.
 
 ---
 
