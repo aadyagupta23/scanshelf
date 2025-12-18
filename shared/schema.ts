@@ -6,12 +6,10 @@ import { z } from "zod";
 const getSchemaName = () => {
   // For Vercel deployments, check VERCEL_ENV and git branch
   if (process.env.VERCEL_ENV) {
-    // On Vercel production (main branch)
     if (process.env.VERCEL_ENV === 'production') {
       return 'public';
     }
     
-    // On Vercel preview deployments (feature branches) or development
     if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development') {
       return 'development';
     }
@@ -22,7 +20,6 @@ const getSchemaName = () => {
     return 'development';
   }
   
-  // Check git branch name (useful for local and CI/CD)
   const gitBranch = process.env.VERCEL_GIT_COMMIT_REF || process.env.GIT_BRANCH || process.env.BRANCH;
   if (gitBranch && gitBranch !== 'main' && gitBranch !== 'master') {
     return 'development';
@@ -33,7 +30,6 @@ const getSchemaName = () => {
     return 'public';
   }
   
-  // Default to development for everything else
   return 'development';
 };
 
