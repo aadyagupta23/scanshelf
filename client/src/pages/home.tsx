@@ -127,7 +127,7 @@ export default function Home() {
             <path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"></path>
           </svg>
         </div>
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">Start Using ShelfScanner Today</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">Start Using Scanshelf Today</h2>
         <p className="text-gray-600 dark:text-gray-300 max-w-xl mx-auto mb-6">
           Never miss a great book again. Our app helps you quickly find books that match your unique reading preferences even in a crowded bookshelf.
         </p>
@@ -141,7 +141,7 @@ export default function Home() {
       {/* Footer with Privacy Policy and Terms */}
       <div className="mt-20 pt-6 border-t border-gray-200 dark:border-gray-700">
         <div className="flex flex-col md:flex-row justify-center items-center text-xs text-gray-500 dark:text-gray-400 space-y-2 md:space-y-0 md:space-x-6">
-          <span>© {new Date().getFullYear()} ShelfScanner. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Scanshelf. All rights reserved.</span>
           <Link href="/privacy-policy">
             <span className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Privacy Policy</span>
           </Link>
