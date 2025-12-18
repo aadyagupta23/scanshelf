@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({ 
-    message: 'ShelfScanner API',
+    message: 'scanshelf API',
     version: '1.0.0',
     endpoints: [
       '/api/health-check',
