@@ -1,37 +1,37 @@
-# Scanshelf 📚
+# Scanshelf 
 
-> Turn any bookshelf into smart recommendations — instantly.
+> Turn any bookshelf into smart recommendations instantly.
 
-scanshelf identifies books from a single photo and delivers **personalized recommendations**. No accounts, no friction — just scan, discover, and decide.
+scanshelf identifies books from a single photo and delivers **personalized recommendations**. No accounts, no friction just scan, discover, and decide.
 
 ---
 
 ## ✨ What You Can Do
 
-📸 **Scan Full Bookshelves** — Capture multiple books in one photo
-🤖 **Smart Recommendations** — AI-powered suggestions tailored to your taste
-📖 **Understand the Why** — Clear match reasoning for every recommendation
-📚 **Save for Later** — Build and manage your personal reading list
-🛒 **Buy Instantly** — Direct Amazon links when you’re ready to purchase
+**Scan Full Bookshelves**: Capture multiple books in one photo
+**Smart Recommendations**: AI-powered suggestions tailored to your taste
+**Understand the Why**: Clear match reasoning for every recommendation
+**Save for Later**: Build and manage your personal reading list
+**Buy Instantly**: Direct Amazon links when you’re ready to purchase
 
 ---
 
 ## 🚀 Core Features
 
-### 🔍 Intelligent Book Discovery
+### Intelligent Book Discovery
 
 * **Shelf Scanning**: Detects multiple book titles from a single image
 * **Metadata Enrichment**: Pulls detailed info from external book APIs
 * **AI Summaries & Ratings**: Enhanced descriptions generated on demand
 * **Match Reasoning**: Transparent explanation behind each recommendation
 
-### 🎯 Personalization
+### Personalization
 
 * **Goodreads Import**: Upload CSV to personalize recommendations
 * **Manual Preferences**: Fine-tune genres, themes, and interests
 * **Device-Based Profiles**: No sign-ups — preferences stay on your device
 
-### ⚡ Performance & Reliability
+### Performance & Reliability
 
 * **Multi-Layer Caching**: Reduces API calls and improves response times
 * **Rate Limiting**: Prevents abuse and controls cost
@@ -56,7 +56,7 @@ Vercel · Device-based session handling
 
 ---
 
-## 🧑‍💻 Local Setup
+## Local Setup
 
 ### Prerequisites
 
@@ -75,7 +75,7 @@ Create a `.env` file in the root:
 App runs at **[http://localhost:5000](http://localhost:5000)**
 
 
-## 🧠 How It Works
+## How It Works
 
 1. **Image Capture** — User photographs a bookshelf
 2. **Text Extraction and Book Matching** — Spine text is parsed and cleaned, and then matched
@@ -92,7 +92,7 @@ App runs at **[http://localhost:5000](http://localhost:5000)**
 * Built-in rate limiting
 
 
-## 🧭 Admin & Debug
+## Admin & Debug
 
 Basic monitoring available at `/admin`:
 
