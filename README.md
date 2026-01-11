@@ -6,7 +6,7 @@ scanshelf identifies books from a single photo and delivers **personalized recom
 
 ---
 
-## ✨ What You Can Do
+## What You Can Do
 
 **Scan Full Bookshelves**: Capture multiple books in one photo
 **Smart Recommendations**: AI-powered suggestions tailored to your taste
@@ -16,7 +16,7 @@ scanshelf identifies books from a single photo and delivers **personalized recom
 
 ---
 
-## 🚀 Core Features
+## Core Features
 
 ### Intelligent Book Discovery
 
@@ -85,7 +85,7 @@ App runs at **[http://localhost:5000](http://localhost:5000)**
 
 ---
 
-## 🔐 Security & Privacy
+## Security & Privacy
 
 * No accounts or emails collected
 * Device-based preference storage
