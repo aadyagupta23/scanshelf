@@ -1,44 +1,37 @@
 /**
- * OpenAI utility functions
- * Moved from demo-openai.ts during code cleanup
+ * AI utility functions for book ratings and summaries
+ * Uses Groq API as the AI provider
  */
-import OpenAI from "openai";
+import groq, { GROQ_MODEL, isGroqConfigured } from "../groq-client.js";
 import { log } from "../simple-logger.js";
 import { rateLimiter } from "../rate-limiter.js";
 
-// Configure OpenAI client
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  maxRetries: 2, 
-  timeout: 15000 // 15 second timeout
-});
-
 /**
- * Gets a book rating using OpenAI's knowledge
+ * Gets a book rating using Groq AI's knowledge
  */
 export async function getOpenAIBookRating(title: string, author: string): Promise<string> {
   try {
     // Check if we have an API key
-    if (!process.env.OPENAI_API_KEY) {
+    if (!isGroqConfigured()) {
       if (process.env.NODE_ENV === 'development') {
-        log("OpenAI API key not found. Using fallback rating system.");
+        log("Groq API key not found. Using fallback rating system.");
       }
       // Return a reasonable fallback rating
       return "4.3";
     }
     
     // Check rate limits and atomically increment if allowed
-    if (!(await rateLimiter.checkAndIncrement('openai'))) {
-      log("Rate limit reached for OpenAI, using fallback rating", "openai");
+    if (!(await rateLimiter.checkAndIncrement('groq'))) {
+      log("Rate limit reached for Groq, using fallback rating", "groq");
       return "4.2";
     }
     
     // Log the API call
-    log(`Getting OpenAI rating for: ${title} by ${author}`, "openai");
+    log(`Getting Groq rating for: ${title} by ${author}`, "groq");
     
-    // Use ChatGPT to generate a realistic rating based on its knowledge
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+    // Use Groq to generate a realistic rating based on its knowledge
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
         {
           role: "system",
@@ -62,7 +55,7 @@ export async function getOpenAIBookRating(title: string, author: string): Promis
       return parsedRating.toFixed(1);
     } else {
       // Fallback if the response couldn't be parsed as a number
-      log(`Invalid rating response from OpenAI: ${content}`, "openai");
+      log(`Invalid rating response from Groq: ${content}`, "groq");
       return "4.2";
     }
   } catch (error) {
@@ -73,41 +66,41 @@ export async function getOpenAIBookRating(title: string, author: string): Promis
       error.message.includes('too many requests') ||
       error.message.includes('quota exceeded')
     )) {
-      log(`OpenAI API rate limit error: ${error.message}`, "openai");
+      log(`Groq API rate limit error: ${error.message}`, "groq");
       return "4.2";
     }
     
     // Log error and provide fallback
-    log(`Error getting OpenAI book rating: ${error instanceof Error ? error.message : String(error)}`);
+    log(`Error getting Groq book rating: ${error instanceof Error ? error.message : String(error)}`);
     return "4.0";
   }
 }
 
 /**
- * Gets a book summary using OpenAI's knowledge
+ * Gets a book summary using Groq AI's knowledge
  */
 export async function getOpenAIBookSummary(title: string, author: string): Promise<string> {
   try {
     // Check if we have an API key
-    if (!process.env.OPENAI_API_KEY) {
+    if (!isGroqConfigured()) {
       if (process.env.NODE_ENV === 'development') {
-        log("OpenAI API key not found. Using fallback summary.");
+        log("Groq API key not found. Using fallback summary.");
       }
       return `This is a book titled "${title}" by ${author}. No summary is available at this time.`;
     }
     
     // Check rate limits and atomically increment if allowed
-    if (!(await rateLimiter.checkAndIncrement('openai'))) {
-      log("Rate limit reached for OpenAI, using fallback summary", "openai");
+    if (!(await rateLimiter.checkAndIncrement('groq'))) {
+      log("Rate limit reached for Groq, using fallback summary", "groq");
       return `"${title}" by ${author} is a noteworthy book in its genre. (API rate limit reached)`;
     }
     
     // Log the API call
-    log(`Getting OpenAI summary for: ${title} by ${author}`, "openai");
+    log(`Getting Groq summary for: ${title} by ${author}`, "groq");
     
-    // Use ChatGPT to generate a book summary based on its knowledge
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+    // Use Groq to generate a book summary based on its knowledge
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
         {
           role: "system",
@@ -129,7 +122,7 @@ export async function getOpenAIBookSummary(title: string, author: string): Promi
       return summary;
     } else {
       // Fallback if the response is too short or empty
-      log(`Invalid summary response from OpenAI: ${summary}`, "openai");
+      log(`Invalid summary response from Groq: ${summary}`, "groq");
       return `"${title}" by ${author} is a noteworthy book in its genre. (No detailed summary available)`;
     }
   } catch (error) {
@@ -140,12 +133,12 @@ export async function getOpenAIBookSummary(title: string, author: string): Promi
       error.message.includes('too many requests') ||
       error.message.includes('quota exceeded')
     )) {
-      log(`OpenAI API rate limit error: ${error.message}`, "openai");
+      log(`Groq API rate limit error: ${error.message}`, "groq");
       return `"${title}" by ${author} is a noteworthy book in its genre. (API rate limit reached)`;
     }
     
     // Log error and provide fallback
-    log(`Error getting OpenAI book summary: ${error instanceof Error ? error.message : String(error)}`);
+    log(`Error getting Groq book summary: ${error instanceof Error ? error.message : String(error)}`);
     return `"${title}" by ${author} is a book that could not be summarized at this time due to technical limitations.`;
   }
 }

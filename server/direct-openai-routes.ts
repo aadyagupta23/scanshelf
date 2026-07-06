@@ -1,12 +1,13 @@
 import { Router, Request, Response } from "express";
 import { getOpenAIRecommendations } from "./openai-recommendations.js";
 import { getOpenAIDescription } from "./openai-descriptions.js";
+import { isGroqConfigured } from "./groq-client.js";
 import { log } from './simple-logger.js';
 
 const router = Router();
 
 /**
- * Get fresh recommendations with OpenAI descriptions and match reasons
+ * Get fresh recommendations with Groq descriptions and match reasons
  * POST /api/direct/recommendations
  */
 router.post("/recommendations", async (req: Request, res: Response) => {
@@ -23,18 +24,18 @@ router.post("/recommendations", async (req: Request, res: Response) => {
     // Get device ID from cookie if available
     const deviceId = req.cookies?.deviceId || 'test-user';
     
-    log(`Processing direct OpenAI recommendation request with ${books.length} books`, "openai");
+    log(`Processing direct Groq recommendation request with ${books.length} books`, "groq");
 
-    // Check OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
+    // Check Groq API key
+    if (!isGroqConfigured()) {
       return res.status(400).json({
         success: false,
-        message: "OpenAI API key is not configured. Please add it to your environment variables."
+        message: "Groq API key is not configured. Please add GROQ_API_KEY to your environment variables."
       });
     }
     
     // Log the request details for debugging
-    log(`Processing recommendation request for ${books.length} books with preferences: ${JSON.stringify(preferences || {})}`, "openai");
+    log(`Processing recommendation request for ${books.length} books with preferences: ${JSON.stringify(preferences || {})}`, "groq");
     
     // We don't use fallback recommendations anymore
     // All recommendations must come from the actual scanned books

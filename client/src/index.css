@@ -2,91 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme Configuration */
 :root {
-  /* Light theme */
-  --background: 0 0% 100%; /* White background */
-  --foreground: 222.2 84% 4.9%; /* Dark text */
-  --muted: 210 40% 96.1%;
+  /* Light Theme */
+  --background: 120 15% 98%;
+  --foreground: 222.2 84% 4.9%;
+  --muted: 120 10% 93%;
   --muted-foreground: 215.4 16.3% 46.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%; /* White cards */
-  --card-foreground: 222.2 84% 4.9%; /* Dark text in cards */
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  
-  /* Violet primary color */
-  --primary: 265 89% 58%; /* Violet */
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --border: 120 10% 88%;
+  --input: 120 10% 88%;
+  --primary: 158 53% 38%;
   --primary-foreground: 210 40% 98%;
-  
-  /* Subtle secondary color */
-  --secondary: 210 40% 96.1%;
+  --secondary: 120 10% 93%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  
-  /* Subtle accent color for highlights */
-  --accent: 210 40% 96.1%;
+  --accent: 120 10% 93%;
   --accent-foreground: 222.2 47.4% 11.2%;
-  
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --ring: 214 100% 50%; /* Match primary for focus rings */
+  --ring: 158 53% 38%;
   --radius: 0.5rem;
-  
-  /* Sidebar colors */
   --sidebar-background: 0 0% 100%;
   --sidebar-foreground: 222.2 84% 4.9%;
-  --sidebar-primary: 214 100% 50%;
+  --sidebar-primary: 158 53% 38%;
   --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 210 40% 96.1%;
+  --sidebar-accent: 120 10% 93%;
   --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-  --sidebar-border: 214.3 31.8% 91.4%;
-  --sidebar-ring: 214 100% 50%;
+  --sidebar-border: 120 10% 88%;
+  --sidebar-ring: 158 53% 38%;
 }
 
 .dark {
-  /* Black background */
-  --background: 0 0% 0%;
+  /* Dark Theme */
+  --background: 160 20% 8%;
   --foreground: 210 40% 98%;
-  
-  /* Gray boxes */
-  --muted: 217 33% 17%;
+  --muted: 160 12% 14%;
   --muted-foreground: 215 20.2% 75%;
-  --popover: 222 20% 15%;
+  --popover: 160 15% 12%;
   --popover-foreground: 210 40% 98%;
-  --card: 222 20% 15%;
+  --card: 160 15% 12%;
   --card-foreground: 210 40% 98%;
-  
-  /* Brighter borders for contrast */
-  --border: 217 33% 25%;
-  --input: 217 33% 25%;
-  
-  /* Keep primary color vibrant but slightly adjusted for dark mode */
-  --primary: 265 89% 58%;
+  --border: 160 12% 18%;
+  --input: 160 12% 18%;
+  --primary: 158 64% 52%;
   --primary-foreground: 210 40% 98%;
-  
-  /* Secondary color for dark theme */
-  --secondary: 217 33% 25%;
+  --secondary: 160 12% 18%;
   --secondary-foreground: 210 40% 98%;
-  
-  /* Accent color for dark theme */
-  --accent: 217 33% 25%;
+  --accent: 160 12% 18%;
   --accent-foreground: 210 40% 98%;
-  
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --ring: 265 89% 58%;
-  
-  /* Sidebar colors for dark theme */
-  --sidebar-background: 0 0% 0%;
+  --ring: 158 64% 52%;
+  --sidebar-background: 160 20% 8%;
   --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 265 89% 58%;
+  --sidebar-primary: 158 64% 52%;
   --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 217 33% 25%;
+  --sidebar-accent: 160 12% 18%;
   --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217 33% 25%;
-  --sidebar-ring: 265 89% 58%;
+  --sidebar-border: 160 12% 18%;
+  --sidebar-ring: 158 64% 52%;
 }
 
+/* Base Layer */
 @layer base {
   * {
     @apply border-border;

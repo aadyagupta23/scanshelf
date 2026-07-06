@@ -145,9 +145,6 @@ export default function Home() {
           <Link href="/privacy-policy">
             <span className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Privacy Policy</span>
           </Link>
-          <Link href="/terms-conditions">
-            <span className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Terms & Conditions</span>
-          </Link>
         </div>
       </div>
     </div>

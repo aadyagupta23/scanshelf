@@ -51,14 +51,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!process.env.OPENAI_API_KEY && !process.env.GOOGLE_VISION_API_KEY) {
-      console.error('Missing required API keys: Both OpenAI and Google Vision keys are missing');
-      return res.status(500).json({
-        message: 'Server configuration error: Image analysis service not available',
-        error: 'API keys for image processing are missing'
-      });
-    }
-
     // Parse multipart form data
     const form = formidable.default({
       maxFileSize: 5 * 1024 * 1024, // 5MB
@@ -94,7 +86,7 @@ export default async function handler(req, res) {
     const base64Image = buffer.toString('base64');
     console.log('Image converted to base64, length:', base64Image.length);
 
-    // Analyze with OpenAI Vision
+    // Analyze with local OCR and optional Groq refinement
     const visionAnalysis = await analyzeBookshelfImage(base64Image);
     console.log('Vision analysis completed:', visionAnalysis);
 

@@ -890,7 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Keep the /api/stats endpoint as it might be used internally for monitoring
   app.get('/api/stats', async (req: Request, res: Response) => {
     try {
-      const stats = getApiUsageStats();
+      const stats = await getApiUsageStats();
       return res.status(200).json(stats);
     } catch (error) {
       log(`Error getting API statistics: ${error instanceof Error ? error.message : String(error)}`);

@@ -1,113 +1,52 @@
-import axios from 'axios';
+import Tesseract from 'tesseract.js';
 import { log } from './simple-logger.js';
 
-interface VisionRequest {
-  requests: {
-    image: {
-      content: string;
-    };
-    features: {
-      type: string;
-      maxResults: number;
-    }[];
-  }[];
-}
-
-interface VisionResponse {
-  responses: {
-    labelAnnotations?: {
-      description: string;
-      score: number;
-    }[];
-    textAnnotations?: {
-      description: string;
-    }[];
-    logoAnnotations?: {
-      description: string;
-      score: number;
-    }[];
-    fullTextAnnotation?: {
-      text: string;
-    };
-    error?: {
-      message: string;
-    };
-  }[];
-}
-
+/**
+ * Analyze an image using Tesseract.js OCR
+ * Replaces the previous Google Vision API integration
+ * 
+ * @param base64Image Base64-encoded image data
+ * @returns Object with extracted text, labels, and bookshelf detection
+ */
 export async function analyzeImage(base64Image: string): Promise<any> {
   try {
-    const apiKey = process.env.GOOGLE_VISION_API_KEY;
-    if (!apiKey) {
-      throw new Error('Google Vision API key is not configured');
-    }
-    
     // Remove data URL prefix if present and ensure proper formatting
     let imageContent = base64Image;
     if (imageContent.includes(',')) {
       imageContent = imageContent.split(',')[1];
     }
-    
+
     if (!imageContent || imageContent.length < 100) {
       throw new Error('Invalid image data provided');
     }
-    
-    log(`Processing image with Google Vision API, content length: ${imageContent.length}`);
-    
-    const visionRequest: VisionRequest = {
-      requests: [
-        {
-          image: {
-            content: imageContent,
-          },
-          features: [
-            {
-              type: 'TEXT_DETECTION',
-              maxResults: 5,
-            },
-            {
-              type: 'LABEL_DETECTION',
-              maxResults: 5,
-            },
-          ],
-        },
-      ],
-    };
 
-    const response = await axios.post<VisionResponse>(
-      `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-      visionRequest
-    );
+    log(`Processing image with Tesseract.js OCR, content length: ${imageContent.length}`);
 
-    const visionResponse = response.data.responses[0];
-    
-    if (visionResponse.error) {
-      throw new Error(`Vision API error: ${visionResponse.error.message}`);
-    }
+    // Convert base64 to a buffer for Tesseract
+    const imageBuffer = Buffer.from(imageContent, 'base64');
 
-    // Extract text that might represent book titles or authors
-    let extractedText = '';
-    if (visionResponse.fullTextAnnotation) {
-      extractedText = visionResponse.fullTextAnnotation.text;
-    } else if (visionResponse.textAnnotations && visionResponse.textAnnotations.length > 0) {
-      extractedText = visionResponse.textAnnotations[0].description;
-    }
+    // Run OCR using Tesseract.js
+    const result = await Tesseract.recognize(imageBuffer, 'eng', {
+      logger: () => {} // suppress progress logs
+    });
 
-    // Check if labels indicate it's a book
-    const isBookshelf = visionResponse.labelAnnotations?.some(
-      label => label.description.toLowerCase().includes('book') || 
-               label.description.toLowerCase().includes('shelf') ||
-               label.description.toLowerCase().includes('library')
-    );
+    const extractedText = result.data.text || '';
+
+    log(`Tesseract OCR extracted ${extractedText.length} characters of text`);
+
+    // Simple heuristic to determine if this might be a bookshelf image
+    // Based on the structure of extracted text (multiple short lines suggest book spines)
+    const lines = extractedText.split('\n').filter((line: string) => line.trim().length > 0);
+    const isBookshelf = lines.length >= 3; // Multiple lines of text suggest multiple book spines
 
     return {
       isBookshelf,
       text: extractedText,
-      labels: visionResponse.labelAnnotations || [],
+      labels: []
     };
   } catch (error) {
-    log(`Error analyzing image: ${error instanceof Error ? error.message : String(error)}`, 'vision');
-    
+    log(`Error analyzing image with Tesseract: ${error instanceof Error ? error.message : String(error)}`, 'vision');
+
     // Return empty data so that the user knows there was an error
     return {
       isBookshelf: false,

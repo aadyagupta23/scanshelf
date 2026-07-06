@@ -9,17 +9,13 @@ import Home from "@/pages/home";
 import Books from "@/pages/books";
 import SavedBooks from "@/pages/saved-books";
 import PrivacyPolicy from "@/pages/privacy-policy";
-import TermsConditions from "@/pages/terms-conditions";
 import Navbar from "@/components/layout/Navbar";
-import ContactForm from "@/components/contact/ContactForm";
 import { DeviceProvider } from "./contexts/DeviceContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { syncDeviceIdCookie } from "./lib/deviceId";
 import AdminPage from "@/pages/admin";
 import Debug from "@/pages/debug";
 
-
-// Google script loading removed
 
 function Router() {
   return (
@@ -29,7 +25,6 @@ function Router() {
         <Route path="/books" component={Books} />
         <Route path="/reading-list" component={SavedBooks} />
         <Route path="/privacy-policy" component={PrivacyPolicy} />
-        <Route path="/terms-conditions" component={TermsConditions} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/debug" component={Debug} />
         <Route component={NotFound} />
@@ -40,10 +35,8 @@ function Router() {
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const toggleContact = () => setContactOpen(!contactOpen);
 
   // Initialize device ID on app load
   useEffect(() => {
@@ -59,8 +52,7 @@ function App() {
             <div className="min-h-screen flex flex-col bg-background text-foreground">
               <Navbar 
                 sidebarOpen={sidebarOpen} 
-                toggleSidebar={toggleSidebar} 
-                toggleContact={toggleContact} 
+                toggleSidebar={toggleSidebar}
               />
               <div className="flex flex-1">
                 {/* Overlay when sidebar is open (all devices) */}
@@ -74,8 +66,6 @@ function App() {
                 <main className="flex-1 overflow-x-hidden overflow-y-auto">
                   <Router />
                 </main>
-                
-                <ContactForm isOpen={contactOpen} onClose={() => setContactOpen(false)} />
               </div>
             </div>
             <Toaster />

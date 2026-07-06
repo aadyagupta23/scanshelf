@@ -1,16 +1,9 @@
-import OpenAI from "openai";
+import groq, { GROQ_MODEL, isGroqConfigured } from "./groq-client.js";
 import { log } from './simple-logger.js';
 import { rateLimiter } from './rate-limiter.js';
 
-// Configure OpenAI client
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  maxRetries: 2,
-  timeout: 20000
-});
-
 /**
- * Get book recommendations using OpenAI
+ * Get book recommendations using Groq AI
  * This ensures all recommendations come directly from AI
  * 
  * @param userBooks Array of books the user has read/saved
@@ -34,37 +27,22 @@ export async function getOpenAIRecommendations(
   matchReason?: string
 }>> {
   try {
-    // Check if OpenAI is configured
-    if (!process.env.OPENAI_API_KEY) {
-      log('OpenAI API key not configured for recommendations', 'openai');
-      throw new Error("OpenAI API key is required for recommendations");
+    // Check if Groq is configured
+    if (!isGroqConfigured()) {
+      log('Groq API key not configured for recommendations', 'groq');
+      throw new Error("Groq API key is required for recommendations");
     }
     
     // Check rate limits and atomically increment if allowed
-    if (!(await rateLimiter.checkAndIncrement('openai'))) {
-      log('Rate limit reached for OpenAI, unable to generate recommendations', 'openai');
+    if (!(await rateLimiter.checkAndIncrement('groq'))) {
+      log('Rate limit reached for Groq, unable to generate recommendations', 'groq');
       throw new Error("Rate limit reached for AI recommendations");
     }
     
-    // Format user books for the prompt (currently unused)
-    const _formattedBooks = userBooks.map(book => 
-      `"${book.title}" by ${book.author}`
-    ).join(', ');
-    
-    // Format user preferences (currently unused)
-    const _genres = preferences.genres?.join(', ') || '';
-    const _authors = preferences.authors?.join(', ') || '';
-    
-    // Generate recommendations using OpenAI
-    log(`Generating recommendations based on ${userBooks.length} books`, 'openai');
-    
-    // We will never use fallback recommendations
-    // All recommendations must be derived from the user's actual scanned books
-    // If OpenAI doesn't provide valid recommendations, we'll throw an error
-    // This ensures we only show genuine personalized recommendations
+    // Generate recommendations using Groq
+    log(`Generating recommendations based on ${userBooks.length} books`, 'groq');
     
     try {
-      // Attempt to get recommendations from OpenAI
       // Create a list of book titles and authors from the input
       const bookTitlesAndAuthors = userBooks.map(book => ({
         title: book.title,
@@ -83,9 +61,8 @@ export async function getOpenAIRecommendations(
         ? `Authors I like: ${preferences.authors.join(', ')}.` 
         : '';
       
-      // Format any Goodreads data if available in a more readable way
+      // Format any Goodreads data if available
       let goodreadsInfo = '';
-      // @ts-ignore - Goodreads data may exist in the preferences object
       if (preferences.goodreadsData) {
         try {
           const goodreads = preferences.goodreadsData;
@@ -109,7 +86,7 @@ export async function getOpenAIRecommendations(
                  entry["Bookshelves"].includes("want-to-read") || 
                  entry["Bookshelves"].includes("want to read")))
               .map((entry: any) => `${entry["Title"]} by ${entry["Author"]}`)
-              .slice(0, 10); // Limit to 10 books to avoid very long prompts
+              .slice(0, 10);
               
             if (wantToReadList.length > 0) {
               wantToReadBooks = `Books I want to read from Goodreads: ${wantToReadList.join(', ')}.`;
@@ -120,12 +97,10 @@ export async function getOpenAIRecommendations(
             .filter(text => text.length > 0)
             .join(' ');
           
-          // Fallback if the structure is different
           if (!goodreadsInfo) {
             goodreadsInfo = `Additional reading preferences from my Goodreads profile.`;
           }
         } catch {
-          // If there's an error parsing Goodreads data, use a simpler format
           goodreadsInfo = `I have additional reading preferences from my Goodreads profile.`;
         }
       }
@@ -135,8 +110,8 @@ export async function getOpenAIRecommendations(
         .filter(text => text.length > 0)
         .join(' ');
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // Using the latest model
+      const response = await groq.chat.completions.create({
+        model: GROQ_MODEL,
         messages: [
           {
             role: "system",
@@ -195,24 +170,21 @@ Only return the JSON object with no additional text.`
         temperature: 0.7
       });
       
-
-      
       // Parse the recommendations
       const content = response.choices[0].message.content;
       if (!content) {
-        log("Empty response from OpenAI API", 'openai');
-        throw new Error("OpenAI API returned an empty response");
+        log("Empty response from Groq API", 'groq');
+        throw new Error("Groq API returned an empty response");
       }
       
       try {
-        // Log the raw response for debugging
-        log(`Raw OpenAI response: ${content.substring(0, 200)}...`, 'openai');
+        log(`Raw Groq response: ${content.substring(0, 200)}...`, 'groq');
         
         const parsed = JSON.parse(content);
         
         // Check if we have recommendations in the expected format
         if (parsed.recommendations && Array.isArray(parsed.recommendations) && parsed.recommendations.length > 0) {
-          log(`Successfully parsed ${parsed.recommendations.length} recommendations from OpenAI`, 'openai');
+          log(`Successfully parsed ${parsed.recommendations.length} recommendations from Groq`, 'groq');
           
           // Create a map of books from the user's list for easy lookup
           const userBooksMap = new Map();
@@ -222,7 +194,6 @@ Only return the JSON object with no additional text.`
           });
           
           // Validate that each recommendation is from the user's book list
-          // And enhance with original properties (like coverUrl, isbn) from the user's book
           const validatedRecommendations = parsed.recommendations.filter((rec: any) => {
             if (!rec.title || !rec.author) {return false;}
             
@@ -230,17 +201,14 @@ Only return the JSON object with no additional text.`
             const isInUserBooks = userBooksMap.has(key);
             
             if (!isInUserBooks) {
-              log(`Filtering out recommendation "${rec.title}" as it's not in the user's book list`, 'openai');
+              log(`Filtering out recommendation "${rec.title}" as it's not in the user's book list`, 'groq');
             }
             
             return isInUserBooks;
           }).map((rec: any) => {
-            // Enhance the recommendation with original properties from the user's book
             const key = `${rec.title.toLowerCase()}|${rec.author.toLowerCase()}`;
             const originalBook = userBooksMap.get(key);
             
-            // Preserve important properties from the original book like coverUrl and ISBN
-            // Also include the matchReason from the OpenAI response
             return {
               ...rec,
               coverUrl: originalBook.coverUrl || rec.coverUrl,
@@ -249,35 +217,28 @@ Only return the JSON object with no additional text.`
             };
           });
           
-          log(`Validated ${validatedRecommendations.length} recommendations are from the user's book list`, 'openai');
+          log(`Validated ${validatedRecommendations.length} recommendations are from the user's book list`, 'groq');
           return validatedRecommendations;
         }
         
         // If not in the expected format but we have an array, try to use that with validation
         if (Array.isArray(parsed) && parsed.length > 0) {
-          log(`Found ${parsed.length} recommendations in array format from OpenAI`, 'openai');
+          log(`Found ${parsed.length} recommendations in array format from Groq`, 'groq');
           
-          // Create a map of books from the user's list for easy lookup
           const userBooksMap = new Map();
           userBooks.forEach(book => {
             const key = `${book.title.toLowerCase()}|${book.author.toLowerCase()}`;
             userBooksMap.set(key, book);
           });
           
-          // Validate that each recommendation is from the user's book list
-          // And enhance with original properties (like coverUrl, isbn) from the user's book
           const validatedRecommendations = parsed.filter((rec: any) => {
             if (!rec.title || !rec.author) {return false;}
-            
             const key = `${rec.title.toLowerCase()}|${rec.author.toLowerCase()}`;
             return userBooksMap.has(key);
           }).map((rec: any) => {
-            // Enhance the recommendation with original properties from the user's book
             const key = `${rec.title.toLowerCase()}|${rec.author.toLowerCase()}`;
             const originalBook = userBooksMap.get(key);
             
-            // Preserve important properties from the original book like coverUrl and ISBN
-            // Also include the matchReason from the OpenAI response
             return {
               ...rec,
               coverUrl: originalBook.coverUrl || rec.coverUrl,
@@ -286,22 +247,22 @@ Only return the JSON object with no additional text.`
             };
           });
           
-          log(`Validated ${validatedRecommendations.length} recommendations are from the user's book list`, 'openai');
+          log(`Validated ${validatedRecommendations.length} recommendations are from the user's book list`, 'groq');
           return validatedRecommendations;
         }
         
-        log("No valid recommendations structure found in OpenAI response", 'openai');
-        throw new Error("Could not extract valid book recommendations from OpenAI response");
+        log("No valid recommendations structure found in Groq response", 'groq');
+        throw new Error("Could not extract valid book recommendations from Groq response");
       } catch (error) {
-        log(`Error parsing OpenAI recommendations: ${error instanceof Error ? error.message : String(error)}`, 'openai');
-        throw new Error("Failed to parse OpenAI book recommendations");
+        log(`Error parsing Groq recommendations: ${error instanceof Error ? error.message : String(error)}`, 'groq');
+        throw new Error("Failed to parse Groq book recommendations");
       }
     } catch (error) {
-      log(`Error from OpenAI API: ${error instanceof Error ? error.message : String(error)}`, 'openai');
+      log(`Error from Groq API: ${error instanceof Error ? error.message : String(error)}`, 'groq');
       throw new Error(`Failed to generate book recommendations: ${error instanceof Error ? error.message : String(error)}`);
     }
   } catch (error) {
-    log(`Error generating OpenAI recommendations: ${error instanceof Error ? error.message : String(error)}`, 'openai');
+    log(`Error generating Groq recommendations: ${error instanceof Error ? error.message : String(error)}`, 'groq');
     throw error;
   }
 }

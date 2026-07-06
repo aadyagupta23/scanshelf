@@ -70,11 +70,6 @@ test.describe('shelfscan Basic Flow', () => {
     await expect(page.getByText(/privacy policy/i)).toBeVisible();
   });
 
-  test('should display terms and conditions', async ({ page }) => {
-    await page.click('text=Terms');
-    await expect(page).toHaveURL(/.*terms-conditions/);
-    await expect(page.getByText(/terms.*conditions/i)).toBeVisible();
-  });
 
   test('should handle 404 for unknown routes', async ({ page }) => {
     await page.goto('/non-existent-page');

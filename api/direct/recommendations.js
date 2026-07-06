@@ -3,7 +3,7 @@
 import 'dotenv/config';
 
 /**
- * API handler for direct OpenAI recommendations
+ * API handler for direct Groq recommendations
  * @param {import('@vercel/node').VercelRequest} req - The request object
  * @param {import('@vercel/node').VercelResponse} res - The response object
  */
@@ -25,8 +25,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Import the OpenAI recommendations function
+    // Import the AI recommendations function
     const { getOpenAIRecommendations } = await import('../../server/openai-recommendations.js');
+    const { isGroqConfigured } = await import('../../server/groq-client.js');
     const { log } = await import('../../server/simple-logger.js');
 
 
@@ -43,18 +44,18 @@ export default async function handler(req, res) {
     // Get device ID from cookie if available
     const deviceId = req.cookies?.deviceId || 'anonymous-user';
     
-    log(`Processing direct OpenAI recommendation request with ${books.length} books`, "openai");
+    log(`Processing direct Groq recommendation request with ${books.length} books`, "groq");
 
-    // Check OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
+    // Check Groq API key
+    if (!isGroqConfigured()) {
       return res.status(400).json({
         success: false,
-        message: "OpenAI API key is not configured. Please add it to your environment variables."
+        message: "Groq API key is not configured. Please add GROQ_API_KEY to your environment variables."
       });
     }
     
     // Log the request details for debugging
-    log(`Processing recommendation request for ${books.length} books with preferences: ${JSON.stringify(preferences || {})}`, "openai");
+    log(`Processing recommendation request for ${books.length} books with preferences: ${JSON.stringify(preferences || {})}`, "groq");
     
     try {
       // Get base recommendations from OpenAI

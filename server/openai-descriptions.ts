@@ -1,13 +1,6 @@
-import OpenAI from "openai";
+import groq, { GROQ_MODEL, isGroqConfigured } from "./groq-client.js";
 import { log } from './simple-logger.js';
 import { rateLimiter } from './rate-limiter.js';
-
-// Configure OpenAI client
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  maxRetries: 2,
-  timeout: 15000
-});
 
 // In-memory cache to reduce API calls and improve performance
 const descriptionCache = new Map<string, string>();
@@ -22,12 +15,12 @@ const PREDEFINED_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
- * Generate a fresh book description using OpenAI
- * This ensures we always use AI-generated descriptions instead of Google Books
+ * Generate a fresh book description using Groq AI
+ * This ensures we always use AI-generated descriptions instead of third-party sources
  * 
  * @param title Book title
  * @param author Book author
- * @returns A concise OpenAI-generated book description
+ * @returns A concise AI-generated book description
  */
 export async function getOpenAIDescription(title: string, author: string): Promise<string> {
   try {
@@ -37,35 +30,35 @@ export async function getOpenAIDescription(title: string, author: string): Promi
     // Check if we have this description cached in memory
     if (descriptionCache.has(cacheKey)) {
       const cachedDescription = descriptionCache.get(cacheKey);
-      log(`Using cached description for "${title}" by ${author}`, 'openai');
+      log(`Using cached description for "${title}" by ${author}`, 'groq');
       return cachedDescription!;
     }
     
     // Check if we have a predefined description
     if (PREDEFINED_DESCRIPTIONS[cacheKey]) {
       const predefinedDescription = PREDEFINED_DESCRIPTIONS[cacheKey];
-      descriptionCache.set(cacheKey, predefinedDescription); // Cache it for future use
-      log(`Using predefined description for "${title}" by ${author}`, 'openai');
+      descriptionCache.set(cacheKey, predefinedDescription);
+      log(`Using predefined description for "${title}" by ${author}`, 'groq');
       return predefinedDescription;
     }
     
-    log(`Generating fresh OpenAI description for "${title}" by ${author}`, 'openai');
+    log(`Generating fresh Groq description for "${title}" by ${author}`, 'groq');
     
-    // Check if OpenAI is configured
-    if (!process.env.OPENAI_API_KEY) {
-      log('OpenAI API key not configured for description generation', 'openai');
+    // Check if Groq is configured
+    if (!isGroqConfigured()) {
+      log('Groq API key not configured for description generation', 'groq');
       return "No description available";
     }
     
     // Check rate limits and atomically increment if allowed
-    if (!(await rateLimiter.checkAndIncrement('openai'))) {
-      log('Rate limit reached for OpenAI, skipping description generation', 'openai');
+    if (!(await rateLimiter.checkAndIncrement('groq'))) {
+      log('Rate limit reached for Groq, skipping description generation', 'groq');
       return "Description temporarily unavailable";
     }
     
-    // Generate a high-quality description using OpenAI
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // Using the latest model
+    // Generate a high-quality description using Groq
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
         {
           role: "system",
@@ -88,7 +81,7 @@ export async function getOpenAIDescription(title: string, author: string): Promi
     
     // Extract and return the description
     const description = response.choices[0].message.content?.trim() || "No description available";
-    log(`Generated OpenAI description for "${title}" (${description.length} chars)`, 'openai');
+    log(`Generated Groq description for "${title}" (${description.length} chars)`, 'groq');
     
     // Cache the description for future use
     descriptionCache.set(cacheKey, description);
@@ -102,17 +95,17 @@ export async function getOpenAIDescription(title: string, author: string): Promi
       error.message.includes('too many requests') ||
       error.message.includes('quota exceeded')
     )) {
-      log(`OpenAI API rate limit error: ${error.message}`, 'openai');
+      log(`Groq API rate limit error: ${error.message}`, 'groq');
       return "Description temporarily unavailable due to rate limits";
     }
     
-    log(`Error generating OpenAI description: ${error instanceof Error ? error.message : String(error)}`, 'openai');
+    log(`Error generating Groq description: ${error instanceof Error ? error.message : String(error)}`, 'groq');
     return "Description unavailable";
   }
 }
 
 /**
- * Generate a personalized match reason using OpenAI
+ * Generate a personalized match reason using Groq AI
  * Explains why a specific book matches the user's preferences
  * 
  * @param title Book title
@@ -145,29 +138,29 @@ export async function getOpenAIMatchReason(
     // Check if we have this match reason cached in memory
     if (matchReasonCache.has(cacheKey)) {
       const cachedReason = matchReasonCache.get(cacheKey);
-      log(`Using cached match reason for "${title}" by ${author}`, 'openai');
+      log(`Using cached match reason for "${title}" by ${author}`, 'groq');
       return cachedReason!;
     }
     
     // Check if we have a predefined match reason
     if (PREDEFINED_MATCH_REASONS[cacheKey]) {
       const predefinedReason = PREDEFINED_MATCH_REASONS[cacheKey];
-      matchReasonCache.set(cacheKey, predefinedReason); // Cache it for future use
-      log(`Using predefined match reason for "${title}" by ${author}`, 'openai');
+      matchReasonCache.set(cacheKey, predefinedReason);
+      log(`Using predefined match reason for "${title}" by ${author}`, 'groq');
       return predefinedReason;
     }
     
-    log(`Generating match reason for "${title}" by ${author}`, 'openai');
+    log(`Generating match reason for "${title}" by ${author}`, 'groq');
     
-    // Check if OpenAI is configured
-    if (!process.env.OPENAI_API_KEY) {
-      log('OpenAI API key not configured for match reason generation', 'openai');
+    // Check if Groq is configured
+    if (!isGroqConfigured()) {
+      log('Groq API key not configured for match reason generation', 'groq');
       return "This book matches your reading preferences.";
     }
     
     // Check rate limits and atomically increment if allowed
-    if (!(await rateLimiter.checkAndIncrement('openai'))) {
-      log('Rate limit reached for OpenAI, skipping match reason generation', 'openai');
+    if (!(await rateLimiter.checkAndIncrement('groq'))) {
+      log('Rate limit reached for Groq, skipping match reason generation', 'groq');
       return "This book aligns with your reading interests.";
     }
     
@@ -175,9 +168,9 @@ export async function getOpenAIMatchReason(
     const genresList = userPreferences.genres?.join(', ') || 'various genres';
     const authorsList = userPreferences.authors?.join(', ') || 'various authors';
     
-    // Generate a personalized match reason using OpenAI
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // Using the latest model
+    // Generate a personalized match reason using Groq
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
         {
           role: "system",
@@ -208,7 +201,7 @@ export async function getOpenAIMatchReason(
     const matchReason = response.choices[0].message.content?.trim() || 
       "This book aligns with your reading preferences based on its themes and style.";
     
-    log(`Generated match reason for "${title}" (${matchReason.length} chars)`, 'openai');
+    log(`Generated match reason for "${title}" (${matchReason.length} chars)`, 'groq');
     
     // Cache the match reason for future use
     matchReasonCache.set(cacheKey, matchReason);
@@ -222,11 +215,11 @@ export async function getOpenAIMatchReason(
       error.message.includes('too many requests') ||
       error.message.includes('quota exceeded')
     )) {
-      log(`OpenAI API rate limit error: ${error.message}`, 'openai');
+      log(`Groq API rate limit error: ${error.message}`, 'groq');
       return "This book aligns with your reading preferences (rate limit reached).";
     }
     
-    log(`Error generating match reason: ${error instanceof Error ? error.message : String(error)}`, 'openai');
+    log(`Error generating match reason: ${error instanceof Error ? error.message : String(error)}`, 'groq');
     return "This book appears to align with your reading preferences.";
   }
 }

@@ -3,21 +3,14 @@ import { bookCache, type InsertBookCache, type BookCache } from '../shared/schem
 import { eq, and, or, sql, lte, gte, isNotNull, not, isNull } from 'drizzle-orm';
 import { getEstimatedBookRating } from './utils/book-utils.js';
 import { log } from './simple-logger.js';
-import OpenAI from "openai";
+import groq, { GROQ_MODEL, isGroqConfigured } from './groq-client.js';
 import { rateLimiter } from './rate-limiter.js';
-
-// Configure OpenAI client
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  maxRetries: 2,
-  timeout: 15000
-});
 
 // Cache expiration duration in milliseconds
 const CACHE_DURATION = {
   GOOGLE: 365 * 24 * 60 * 60 * 1000, // 365 days for Google Books (very stable)
   AMAZON: 7 * 24 * 60 * 60 * 1000,   // 7 days for Amazon (pricing changes)
-  OPENAI: 365 * 24 * 60 * 60 * 1000, // 365 days for OpenAI summaries (content doesn't change)
+  GROQ: 365 * 24 * 60 * 60 * 1000,   // 365 days for AI summaries (content doesn't change)
 };
 
 // Default cache duration
@@ -30,17 +23,12 @@ const DEFAULT_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 export class BookCacheService {
   /**
    * Find a book in the cache by title and author
-   * @param title Book title
-   * @param author Book author
-   * @returns BookCache object if found, undefined otherwise
    */
   async findInCache(title: string, author: string): Promise<BookCache | undefined> {
-    // Normalize inputs for better matching
     const normalizedTitle = title.toLowerCase().trim();
     const normalizedAuthor = author.toLowerCase().trim();
 
     try {
-      // Check for both exact and close matches
       const [exactMatch] = await db.select().from(bookCache).where(
         and(
           eq(sql`LOWER(${bookCache.title})`, normalizedTitle),
@@ -49,7 +37,7 @@ export class BookCacheService {
             sql`LOWER(${bookCache.author}) LIKE ${`%${normalizedAuthor}%`}`,
             sql`${normalizedAuthor} LIKE CONCAT('%', LOWER(${bookCache.author}), '%')`
           ),
-          gte(bookCache.expiresAt, new Date()) // Not expired
+          gte(bookCache.expiresAt, new Date())
         )
       );
 
@@ -58,7 +46,6 @@ export class BookCacheService {
         return exactMatch;
       }
 
-      // Try partial match if exact match fails
       const [partialMatch] = await db.select().from(bookCache).where(
         and(
           or(
@@ -69,7 +56,7 @@ export class BookCacheService {
             sql`LOWER(${bookCache.author}) LIKE ${`%${normalizedAuthor}%`}`,
             sql`${normalizedAuthor} LIKE CONCAT('%', LOWER(${bookCache.author}), '%')`
           ),
-          gte(bookCache.expiresAt, new Date()) // Not expired
+          gte(bookCache.expiresAt, new Date())
         )
       ).limit(1);
 
@@ -88,8 +75,6 @@ export class BookCacheService {
 
   /**
    * Find a book in the cache by ISBN
-   * @param isbn Book ISBN
-   * @returns BookCache object if found, undefined otherwise
    */
   async findByISBN(isbn: string): Promise<BookCache | undefined> {
     if (!isbn || isbn.length < 10) {return undefined;}
@@ -98,7 +83,7 @@ export class BookCacheService {
       const [book] = await db.select().from(bookCache).where(
         and(
           eq(bookCache.isbn, isbn),
-          gte(bookCache.expiresAt, new Date()) // Not expired
+          gte(bookCache.expiresAt, new Date())
         )
       );
 
@@ -117,9 +102,6 @@ export class BookCacheService {
 
   /**
    * Save a book to the cache
-   * @param bookData Book data to cache
-   * @param source Source of the book data (google, amazon, openai)
-   * @returns The cached book
    */
   async cacheBook(bookData: {
     title: string;
@@ -132,26 +114,18 @@ export class BookCacheService {
     source?: 'google' | 'amazon' | 'openai' | 'saved';
     expiresAt?: Date;
   }): Promise<BookCache> {
-    // Determine the source based on the content being cached
     let source: 'google' | 'amazon' | 'openai' | 'saved';
     
-    // If we have OpenAI-generated content (summary or rating), mark as OpenAI source
     if (bookData.summary || bookData.rating) {
       source = 'openai';
     } else {
-      // Default to google for basic book info without OpenAI content, or use provided source
       source = bookData.source || 'google';
     }
     
-    // Note: We now allow caching of OpenAI-generated summaries and ratings regardless of initial source
-    // The source will be automatically set to 'openai' when we have OpenAI content
-    
     try {
-      // Normalize inputs for consistent matching
       const normalizedTitle = bookData.title.trim();
       const normalizedAuthor = bookData.author.trim();
       
-      // First perform a direct query to find exact match to prevent duplicates
       const [directMatch] = await db.select().from(bookCache).where(
         and(
           eq(sql`LOWER(TRIM(${bookCache.title}))`, normalizedTitle.toLowerCase()),
@@ -159,73 +133,60 @@ export class BookCacheService {
         )
       );
       
-      // Set expiration based on source if not explicitly provided
       let expiresAt: Date;
       
       if (bookData.expiresAt) {
-        // Use provided expiration date
         expiresAt = bookData.expiresAt;
       } else {
-        // Calculate expiration based on source
         const now = new Date();
         let expirationMs = DEFAULT_EXPIRATION;
         
         switch (source) {
           case 'google': expirationMs = CACHE_DURATION.GOOGLE; break;
           case 'amazon': expirationMs = CACHE_DURATION.AMAZON; break;
-          case 'openai': expirationMs = CACHE_DURATION.OPENAI; break;
-          case 'saved': expirationMs = CACHE_DURATION.OPENAI; break; // Long expiration for user saved books
+          case 'openai': expirationMs = CACHE_DURATION.GROQ; break;
+          case 'saved': expirationMs = CACHE_DURATION.GROQ; break;
         }
         
         expiresAt = new Date(now.getTime() + expirationMs);
       }
 
-      // If we found an exact match with direct query, use that
       if (directMatch) {
-
-        
-        // Update the existing entry with any new information
         const [updated] = await db.update(bookCache)
           .set({
             isbn: bookData.isbn || directMatch.isbn,
             coverUrl: bookData.coverUrl || directMatch.coverUrl,
             rating: bookData.rating || directMatch.rating,
             summary: bookData.summary || directMatch.summary,
-            source: source, // Use the determined source based on content
+            source: source,
             metadata: bookData.metadata || directMatch.metadata,
             expiresAt: expiresAt
           })
           .where(eq(bookCache.id, directMatch.id))
           .returning();
-          
 
         return updated;
       }
       
-      // If no direct match, try the fuzzy search
       const existing = await this.findInCache(normalizedTitle, normalizedAuthor);
       
       if (existing) {
-        // Update existing cache entry with fuzzy match
         const [updated] = await db.update(bookCache)
           .set({
             isbn: bookData.isbn || existing.isbn,
             coverUrl: bookData.coverUrl || existing.coverUrl,
             rating: bookData.rating || existing.rating,
             summary: bookData.summary || existing.summary,
-            source: source, // Use the determined source based on content
+            source: source,
             metadata: bookData.metadata || existing.metadata,
             expiresAt: expiresAt
           })
           .where(eq(bookCache.id, existing.id))
           .returning();
-        
 
         return updated;
       }
       
-      // Insert new cache entry
-      // Generate a unique ID for this book
       const uniqueId = 
         bookData.isbn || 
         `${normalizedTitle}-${normalizedAuthor}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -238,13 +199,12 @@ export class BookCacheService {
         rating: bookData.rating || undefined,
         summary: bookData.summary || undefined,
         source: source,
-        bookId: uniqueId, // Use our generated unique ID
+        bookId: uniqueId,
         metadata: bookData.metadata || undefined,
         expiresAt: expiresAt
       };
       
       const [inserted] = await db.insert(bookCache).values(insertData).returning();
-      
 
       return inserted;
     } catch (error) {
@@ -255,7 +215,6 @@ export class BookCacheService {
 
   /**
    * Remove expired entries from the cache
-   * @returns Number of entries removed
    */
   async cleanupExpired(): Promise<number> {
     try {
@@ -275,11 +234,7 @@ export class BookCacheService {
   }
 
   /**
-   * Get enhanced book summary using OpenAI, leveraging its knowledge of literature
-   * @param title Book title
-   * @param author Book author
-   * @param existingSummary Existing summary to enhance (optional)
-   * @returns Enhanced summary
+   * Get enhanced book summary using Groq AI
    */
   async getEnhancedSummary(
     title: string, 
@@ -287,31 +242,28 @@ export class BookCacheService {
     existingSummary?: string
   ): Promise<string | null> {
     try {
-      // Check if OpenAI is configured
-      if (!process.env.OPENAI_API_KEY) {
-        log('OpenAI API key not configured for summary generation', 'cache');
+      if (!isGroqConfigured()) {
+        log('Groq API key not configured for summary generation', 'cache');
         return existingSummary || null;
       }
       
-      // Look for cached summary first - prioritize OpenAI content
+      // Look for cached summary first - prioritize AI content
       const cachedBook = await this.findInCache(title, author);
       if (cachedBook?.summary && cachedBook.source === 'openai') {
-        // Only use cached summary if it's from OpenAI
-        log(`Using cached OpenAI summary for "${title}"`, 'cache');
+        log(`Using cached AI summary for "${title}"`, 'cache');
         return cachedBook.summary;
       }
       
-      // Check rate limits and atomically increment if allowed
-      if (!(await rateLimiter.checkAndIncrement('openai'))) {
-        log('Rate limit reached for OpenAI, skipping summary enhancement', 'cache');
+      // Check rate limits
+      if (!(await rateLimiter.checkAndIncrement('groq'))) {
+        log('Rate limit reached for Groq, skipping summary enhancement', 'cache');
         return existingSummary || null;
       }
       
-      // Generate a new summary using OpenAI's knowledge
       log(`Generating enhanced summary for "${title}" by ${author}`, 'cache');
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      const response = await groq.chat.completions.create({
+        model: GROQ_MODEL,
         messages: [
           {
             role: "system",
@@ -319,44 +271,31 @@ export class BookCacheService {
           },
           {
             role: "user",
-            content: `Summarize the book "${title}" by ${author}" in 3-4 sentences. Be engaging and highlight what makes this book special. Use only your existing knowledge about this book - do not conduct web searches.`
+            content: `Summarize the book "${title}" by ${author} in 3-4 sentences. Be engaging and highlight what makes this book special. Use only your existing knowledge about this book.`
           }
         ],
         max_tokens: 200,
-        temperature: 0.6 // Slightly higher temperature for more engaging summaries
+        temperature: 0.6
       });
       
       const summary = response.choices[0].message.content?.trim() || null;
       
       if (summary) {
-        // Cache the summary with a longer expiration since book content doesn't change
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 120); // 120 days cache for summaries
+        expiresAt.setDate(expiresAt.getDate() + 120);
         
-        // First check if we already have this book in cache to preserve its data
         const existingBook = await this.findInCache(title, author);
         
-        // If we have an existing book, update it directly to avoid duplicate entries
         if (existingBook) {
-          log(`Updating existing book cache entry (ID: ${existingBook.id}) with new summary`, 'cache');
-          
-          // Direct database update to ensure we don't create duplicates
-          // Also update source to openai since we're adding OpenAI content
-          const [updated] = await db.update(bookCache)
+          await db.update(bookCache)
             .set({
               summary: summary,
-              source: 'openai', // Mark as OpenAI source since we're adding OpenAI content
+              source: 'openai',
               expiresAt
             })
             .where(eq(bookCache.id, existingBook.id))
             .returning();
-            
-          log(`Updated summary for "${title}" in cache ID ${updated.id}`, 'cache');
         } else {
-          // No existing entry - create a new one
-          // Generate a unique book ID
-          const _bookId = `${title.trim()}-${author.trim()}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
-          
           const cacheData = {
             title: title.trim(),
             author: author.trim(),
@@ -369,8 +308,7 @@ export class BookCacheService {
             expiresAt
           };
           
-          const inserted = await this.cacheBook(cacheData);
-          log(`Created new cache entry with summary for "${title}" (ID: ${inserted.id})`, 'cache');
+          await this.cacheBook(cacheData);
         }
         
         log(`Successfully generated and cached summary for "${title}"`, 'cache');
@@ -384,14 +322,7 @@ export class BookCacheService {
   }
   
   /**
-   * Get enhanced book rating using OpenAI
-   * Will try to use cached rating first, then use OpenAI to generate a rating
-   * based on its knowledge of books and literature.
-   * 
-   * @param title Book title
-   * @param author Book author
-   * @param isbn Book ISBN (optional)
-   * @returns Book rating string (e.g. "4.5")
+   * Get enhanced book rating using Groq AI
    */
   async getEnhancedRating(
     title: string,
@@ -399,11 +330,10 @@ export class BookCacheService {
     isbn?: string
   ): Promise<string> {
     try {
-      // Check for cached rating first - prioritize OpenAI content
+      // Check for cached rating first
       const cachedBook = await this.findInCache(title, author);
       if (cachedBook?.rating && cachedBook.source === 'openai') {
-        // Only use cached rating if it's from OpenAI
-        log(`Using cached OpenAI rating for "${title}": ${cachedBook.rating}`, 'cache');
+        log(`Using cached AI rating for "${title}": ${cachedBook.rating}`, 'cache');
         return cachedBook.rating;
       }
       
@@ -411,12 +341,10 @@ export class BookCacheService {
       if (isbn) {
         const isbnBook = await this.findByISBN(isbn);
         if (isbnBook?.rating) {
-          // Check if it's a valid rating regardless of source
           const ratingNum = parseFloat(isbnBook.rating);
           if (!isNaN(ratingNum) && ratingNum >= 1.0 && ratingNum <= 5.0) {
             log(`Using cached ISBN rating for "${title}": ${isbnBook.rating}`, 'cache');
             
-            // Also cache under title/author for future lookups
             await this.cacheBook({
               title,
               author,
@@ -430,29 +358,25 @@ export class BookCacheService {
         }
       }
       
-      // Check if OpenAI is configured
-      if (!process.env.OPENAI_API_KEY) {
-        log('OpenAI API key not configured for rating generation, using estimate', 'cache');
-        const estimatedRating = getEstimatedBookRating(title, author);
-        return estimatedRating;
+      if (!isGroqConfigured()) {
+        log('Groq API key not configured for rating generation, using estimate', 'cache');
+        return getEstimatedBookRating(title, author);
       }
       
-      // Check rate limits and atomically increment if allowed
-      if (!(await rateLimiter.checkAndIncrement('openai'))) {
-        log('Rate limit reached for OpenAI, using estimate for rating', 'cache');
-        const estimatedRating = getEstimatedBookRating(title, author);
-        return estimatedRating;
+      // Check rate limits
+      if (!(await rateLimiter.checkAndIncrement('groq'))) {
+        log('Rate limit reached for Groq, using estimate for rating', 'cache');
+        return getEstimatedBookRating(title, author);
       }
       
-      // Use OpenAI to generate a rating based on its knowledge
-      log(`Generating rating for "${title}" by ${author} using OpenAI`, 'cache');
+      log(`Generating rating for "${title}" by ${author} using Groq`, 'cache');
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      const response = await groq.chat.completions.create({
+        model: GROQ_MODEL,
         messages: [
           {
             role: "system",
-            content: "You are a literary expert with extensive knowledge of books and their reception. Your task is to provide an accurate rating for a book based on critical consensus and general reader reception. Base your rating only on your knowledge of this book's reception - do not conduct web searches."
+            content: "You are a literary expert with extensive knowledge of books and their reception. Your task is to provide an accurate rating for a book based on critical consensus and general reader reception. Base your rating only on your knowledge of this book's reception."
           },
           {
             role: "user",
@@ -460,67 +384,47 @@ export class BookCacheService {
           }
         ],
         max_tokens: 10,
-        temperature: 0.3 // Lower temperature for more consistent ratings
+        temperature: 0.3
       });
       
       const ratingText = response.choices[0].message.content?.trim() || '';
-      log(`OpenAI response for "${title}" rating: "${ratingText}"`, 'cache');
+      log(`Groq response for "${title}" rating: "${ratingText}"`, 'cache');
       
-      // Extract the numeric rating (looking for patterns like "4.5", "4.0", "4", etc.)
       const ratingMatch = ratingText.match(/(\d+(?:\.\d+)?)/);
       let rating = ratingMatch ? ratingMatch[1] : '';
-      log(`Extracted rating for "${title}": "${rating}"`, 'cache');
       
-      // Validate that rating is in the correct range and determine if it's actually from OpenAI
-      let isOpenAIRating = false;
+      let isAIRating = false;
       if (rating) {
         const ratingNumber = parseFloat(rating);
         if (ratingNumber >= 1.0 && ratingNumber <= 5.0) {
-          // Valid rating from OpenAI - ensure it has one decimal place
           rating = ratingNumber.toFixed(1);
-          isOpenAIRating = true;
-          log(`Got valid OpenAI rating: ${rating}`, 'cache');
+          isAIRating = true;
         } else {
-          // Invalid range, use a fallback
-          log(`Invalid rating range from OpenAI: ${ratingNumber}, using fallback`, 'cache');
           rating = getEstimatedBookRating(title, author);
-          isOpenAIRating = false;
+          isAIRating = false;
         }
       } else {
-        // No valid rating extracted, use a fallback
-        log(`Could not extract rating from OpenAI response: "${ratingText}", using fallback`, 'cache');
         rating = getEstimatedBookRating(title, author);
-        isOpenAIRating = false;
+        isAIRating = false;
       }
       
-      // First check if we already have this book in cache to preserve its data
       const existingBook = await this.findInCache(title, author);
+      const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
       
-      const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
-      
-      // If we have an existing book, update it directly to avoid duplicate entries
       if (existingBook) {
-        log(`Updating existing book cache entry (ID: ${existingBook.id}) with new rating: ${rating}`, 'cache');
+        const sourceToUse = isAIRating ? 'openai' : existingBook.source || 'google';
         
-        // Only mark as OpenAI source if we actually got a valid rating from OpenAI
-        const sourceToUse = isOpenAIRating ? 'openai' : existingBook.source || 'google';
-        
-        // Direct database update to ensure we don't create duplicates
-        const [updated] = await db.update(bookCache)
+        await db.update(bookCache)
           .set({
             rating: rating,
-            source: sourceToUse, // This will be 'openai' if rating came from OpenAI
+            source: sourceToUse,
             isbn: isbn || existingBook.isbn,
             expiresAt
           })
           .where(eq(bookCache.id, existingBook.id))
           .returning();
-          
-        log(`Updated rating for "${title}" in cache ID ${updated.id}`, 'cache');
       } else {
-        // No existing entry - create a new one
-        // Only mark as OpenAI source if we actually got a valid rating from OpenAI
-        const sourceToUse = isOpenAIRating ? 'openai' : 'google';
+        const sourceToUse = isAIRating ? 'openai' : 'google';
         
         const cacheData = {
           title: title.trim(),
@@ -534,8 +438,7 @@ export class BookCacheService {
           expiresAt
         };
         
-        const inserted = await this.cacheBook(cacheData);
-        log(`Created new cache entry with rating for "${title}" (ID: ${inserted.id})`, 'cache');
+        await this.cacheBook(cacheData);
       }
       
       log(`Generated rating for "${title}": ${rating}`, 'cache');
@@ -547,28 +450,21 @@ export class BookCacheService {
   }
   
   /**
-   * Run maintenance tasks (cleanup expired entries)
-   * Should be called periodically
+   * Run maintenance tasks
    */
   async runMaintenance(): Promise<void> {
     try {
-      // Cleanup expired entries
       await this.cleanupExpired();
-      
-      // Additional maintenance tasks can be added here
     } catch (error) {
       log(`Error during cache maintenance: ${error instanceof Error ? error.message : String(error)}`, 'cache');
     }
   }
   
   /**
-   * Removes non-OpenAI ratings from the cache
-   * This ensures we only use OpenAI-generated ratings for consistency
-   * @returns Number of entries updated
+   * Removes non-AI ratings from the cache
    */
   async cleanupNonOpenAIRatings(): Promise<number> {
     try {
-      // Find entries with ratings that don't have OpenAI as the source
       const entries = await db.select().from(bookCache)
         .where(
           and(
@@ -581,34 +477,28 @@ export class BookCacheService {
         );
       
       if (entries.length === 0) {
-        log('No non-OpenAI ratings found in cache', 'cache');
+        log('No non-AI ratings found in cache', 'cache');
         return 0;
       }
       
       let updateCount = 0;
       for (const entry of entries) {
-        // Reset the rating but keep other data
         await db.update(bookCache)
-          .set({
-            rating: null
-          })
+          .set({ rating: null })
           .where(eq(bookCache.id, entry.id));
-          
         updateCount++;
       }
       
-      log(`Cleared ratings from ${updateCount} non-OpenAI cache entries`, 'cache');
+      log(`Cleared ratings from ${updateCount} non-AI cache entries`, 'cache');
       return updateCount;
     } catch (error) {
-      log(`Error clearing non-OpenAI ratings: ${error instanceof Error ? error.message : String(error)}`, 'cache');
+      log(`Error clearing non-AI ratings: ${error instanceof Error ? error.message : String(error)}`, 'cache');
       return 0;
     }
   }
   
   /**
-   * Clear cache for testing purposes, but preserves descriptions to avoid regenerating them
-   * @param options Options for selective cache clearing
-   * @returns Number of entries affected
+   * Clear cache for testing purposes
    */
   async clearCacheForTesting(options: {
     preserveDescriptions?: boolean;
@@ -617,9 +507,7 @@ export class BookCacheService {
     try {
       const { preserveDescriptions = true, titleFilter } = options;
       
-      // If we need to preserve descriptions or filter by title, we need a more selective approach
       if (preserveDescriptions || titleFilter) {
-        // First, get the entries that match our criteria
         const baseQuery = db.select().from(bookCache);
         const query = titleFilter 
           ? baseQuery.where(sql`LOWER(${bookCache.title}) LIKE ${`%${titleFilter.toLowerCase()}%`}`)
@@ -629,46 +517,30 @@ export class BookCacheService {
         const count = entries.length;
         
         if (count === 0) {
-          log(`No cache entries found matching the criteria`, 'cache');
           return 0;
         }
         
-        // For testing purposes, we'll just reset the expiresAt date to trigger a refresh
-        // but keep the descriptions to avoid unnecessary OpenAI calls
         const now = new Date();
-        // Set expiry to 1 minute ago to trigger a refresh on next access
         const expiry = new Date(now.getTime() - 60000);
         
         let updateCount = 0;
         for (const entry of entries) {
-          let updateData: any = {
-            expiresAt: expiry
-          };
+          let updateData: any = { expiresAt: expiry };
           
-          // If we don't need to preserve descriptions, also clear those fields
           if (!preserveDescriptions) {
-            updateData = {
-              ...updateData,
-              summary: null
-            };
+            updateData = { ...updateData, summary: null };
           }
           
           await db.update(bookCache)
             .set(updateData)
             .where(eq(bookCache.id, entry.id));
-            
           updateCount++;
         }
         
-        log(`Updated ${updateCount} cache entries for testing (preserving descriptions: ${preserveDescriptions})`, 'cache');
         return updateCount;
       } else {
-        // If we don't need any special handling, just clear everything
         const result = await db.delete(bookCache).returning();
-        const count = result.length;
-        
-        log(`Cleared ${count} entries from book cache`, 'cache');
-        return count;
+        return result.length;
       }
     } catch (error) {
       log(`Error clearing cache for testing: ${error instanceof Error ? error.message : String(error)}`, 'cache');

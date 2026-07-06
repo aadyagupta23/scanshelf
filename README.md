@@ -1,103 +1,65 @@
-# Scanshelf 📚
+# Scanshelf
 
-> Turn any bookshelf into smart recommendations — instantly.
+Turn a bookshelf photo into personalized book recommendations.
 
-scanshelf identifies books from a single photo and delivers **personalized recommendations**. No accounts, no friction — just scan, discover, and decide.
+Scanshelf identifies books from an uploaded shelf image, enriches them with book metadata, and ranks them against your reading preferences. It uses local OCR for image text extraction and Groq's free tier for optional AI refinement, summaries, ratings, and recommendation reasoning.
 
----
+## Features
 
-## ✨ What You Can Do
+- Scan bookshelf photos and detect visible book titles
+- Match detected titles to book metadata
+- Add genres, authors, and Goodreads CSV data for personalization
+- Generate ranked recommendations from the detected books
+- Save books to a device-based reading list
+- Cache book data to reduce repeated API calls
 
-📸 **Scan Full Bookshelves** — Capture multiple books in one photo
-🤖 **Smart Recommendations** — AI-powered suggestions tailored to your taste
-📖 **Understand the Why** — Clear match reasoning for every recommendation
-📚 **Save for Later** — Build and manage your personal reading list
-🛒 **Buy Instantly** — Direct Amazon links when you’re ready to purchase
+## Tech Stack
 
----
+- Frontend: React, TypeScript, TailwindCSS, Vite
+- Backend: Node.js, Express, TypeScript
+- Database: PostgreSQL with Drizzle ORM
+- AI/OCR: Tesseract.js locally, Groq API for free-tier text generation
 
-## 🚀 Core Features
+## Local Setup
 
-### 🔍 Intelligent Book Discovery
+Install dependencies:
 
-* **Shelf Scanning**: Detects multiple book titles from a single image
-* **Metadata Enrichment**: Pulls detailed info from external book APIs
-* **AI Summaries & Ratings**: Enhanced descriptions generated on demand
-* **Match Reasoning**: Transparent explanation behind each recommendation
+```bash
+npm install
+```
 
-### 🎯 Personalization
+Create a `.env` file from `.env.example` and set:
 
-* **Goodreads Import**: Upload CSV to personalize recommendations
-* **Manual Preferences**: Fine-tune genres, themes, and interests
-* **Device-Based Profiles**: No sign-ups — preferences stay on your device
+```bash
+DATABASE_URL=your_database_url
+GROQ_API_KEY=your_groq_key_here
+ENABLE_GROQ=true
+```
 
-### ⚡ Performance & Reliability
+Start the app:
 
-* **Multi-Layer Caching**: Reduces API calls and improves response times
-* **Rate Limiting**: Prevents abuse and controls cost
-* **Graceful Degradation**: Core app works even if AI services fail
-* **PostgreSQL Monitoring**: Connection health and performance tracking
+```bash
+npm run dev
+```
 
----
+The app runs at http://localhost:5000.
 
-## 🛠 Tech Stack
+## Free Model Recommendation
 
-**Frontend**
-React + TypeScript · TailwindCSS · Vite
+Use Groq with `llama-3.3-70b-versatile` for text tasks. It has a free tier, works well for recommendation reasoning, and is already wired through `server/groq-client.ts`.
 
-**Backend**
-Node.js · Express.js · TypeScript · PostgreSQL · Drizzle ORM
+Image recognition is handled with local Tesseract.js OCR first, so the app no longer needs Google Vision. If Groq is unavailable or rate limited, OCR-only fallback still returns possible titles.
 
-**AI & APIs**
-OpenAI (GPT‑4o) · Google Books API (fallback)
+## Useful Commands
 
-**Infrastructure**
-Vercel · Device-based session handling
+```bash
+npm run check
+npm run build
+npm run test:server
+```
 
----
+On Windows PowerShell, use `npm.cmd` if script execution is blocked:
 
-## 🧑‍💻 Local Setup
-
-### Prerequisites
-
-* Node.js 18+
-* PostgreSQL (local or cloud)
-* OpenAI API key
-
-### Clone Repo
-
-### Environment Variables
-
-Create a `.env` file in the root:
-
-.env.example provided
-
-App runs at **[http://localhost:5000](http://localhost:5000)**
-
-
-## 🧠 How It Works
-
-1. **Image Capture** — User photographs a bookshelf
-2. **Text Extraction and Book Matching** — Spine text is parsed and cleaned, and then matched
-3. **AI Enhancement** — Summaries, ratings, and insights generated
-4. **Recommendation Engine** — Personalized recommendations using OpenAI GPT-4o
-5. **Caching Layer** — Results stored to minimize repeat costs
-
----
-
-## 🔐 Security & Privacy
-
-* No accounts or emails collected
-* Device-based preference storage
-* Built-in rate limiting
-
-
-## 🧭 Admin & Debug
-
-Basic monitoring available at `/admin`:
-
-* API usage stats
-* Cache health
-* System diagnostics
-
-
+```bash
+npm.cmd run check
+```

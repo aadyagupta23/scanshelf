@@ -33,9 +33,9 @@ interface StatsResponse {
   timestamp: string;
   stats: Record<string, ApiStats>;
   config: {
-    openaiEnabled: boolean;
-    openaiConfigured: boolean;
-    googleVisionConfigured: boolean;
+    groqEnabled: boolean;
+    groqConfigured: boolean;
+    localOcrEnabled: boolean;
   };
   apiMonitoring?: {
     openai?: {
@@ -214,14 +214,14 @@ export default function AdminPage() {
                 enabled={data?.health?.status === 'healthy'}
               />
               <SystemStatusCard 
-                title="OpenAI API" 
-                status={data?.config.openaiConfigured ? "Configured" : "Not Configured"} 
-                enabled={data?.config.openaiEnabled}
+                title="Groq API"
+                status={data?.config.groqConfigured ? "Configured" : "Not Configured"}
+                enabled={data?.config.groqEnabled}
               />
               <SystemStatusCard 
-                title="Google Vision API" 
-                status={data?.config.googleVisionConfigured ? "Configured" : "Not Configured"} 
-                enabled={data?.config.googleVisionConfigured}
+                title="Local OCR"
+                status={data?.config.localOcrEnabled ? "Available" : "Unavailable"}
+                enabled={data?.config.localOcrEnabled}
               />
                              <SystemStatusCard 
                  title="SMTP Email" 
