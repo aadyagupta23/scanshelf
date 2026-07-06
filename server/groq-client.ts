@@ -34,14 +34,30 @@ async function callOllama(messages: any[], model: string, url: string, isJson: b
 }
 
 // Gemini client
-async function callGemini(messages: any[], apiKey: string, isJson: boolean): Promise<string> {
+async function callGemini(messages: any[], apiKey: string, isJson: boolean, base64Image?: string): Promise<string> {
   const systemMessage = messages.find(m => m.role === "system")?.content || "";
   const contents = messages
     .filter(m => m.role !== "system")
     .map(m => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }]
+      parts: [{ text: m.content }] as any[]
     }));
+
+  if (base64Image) {
+    let cleanBase64 = base64Image;
+    if (cleanBase64.includes(',')) {
+      cleanBase64 = cleanBase64.split(',')[1];
+    }
+    const userMsg = contents.find(c => c.role === "user");
+    if (userMsg) {
+      userMsg.parts.unshift({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: cleanBase64
+        }
+      });
+    }
+  }
 
   const payload: any = {
     contents,
@@ -57,7 +73,7 @@ async function callGemini(messages: any[], apiKey: string, isJson: boolean): Pro
     };
   }
 
-  const model = "gemini-1.5-flash";
+  const model = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   
   const response = await axios.post(url, payload, { timeout: 15000 });
@@ -65,11 +81,39 @@ async function callGemini(messages: any[], apiKey: string, isJson: boolean): Pro
 }
 
 // Groq client
-async function callGroq(messages: any[], model: string, apiKey: string, isJson: boolean): Promise<string> {
+async function callGroq(messages: any[], model: string, apiKey: string, isJson: boolean, base64Image?: string): Promise<string> {
   const client = new Groq({ apiKey });
+  let formattedMessages = messages;
+  let modelToUse = model;
+
+  if (base64Image) {
+    modelToUse = "llama-3.2-11b-vision-preview";
+    let cleanBase64 = base64Image;
+    if (cleanBase64.includes(',')) {
+      cleanBase64 = cleanBase64.split(',')[1];
+    }
+    formattedMessages = messages.map(m => {
+      if (m.role === "user") {
+        return {
+          role: "user",
+          content: [
+            { type: "text", text: m.content },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${cleanBase64}`
+              }
+            }
+          ]
+        };
+      }
+      return m;
+    });
+  }
+
   const response = await client.chat.completions.create({
-    model,
-    messages,
+    model: modelToUse,
+    messages: formattedMessages,
     response_format: isJson ? { type: "json_object" } : undefined,
     temperature: 0.3
   });
@@ -199,7 +243,7 @@ const groqClient = {
         // Try Gemini
         if (process.env.GEMINI_API_KEY) {
           try {
-            const content = await callGemini(messages, process.env.GEMINI_API_KEY, isJson);
+            const content = await callGemini(messages, process.env.GEMINI_API_KEY, isJson, params.image);
             return { choices: [{ message: { content } }] };
           } catch {
             // Fallback
@@ -219,7 +263,7 @@ const groqClient = {
         // Try Groq
         if (process.env.GROQ_API_KEY) {
           try {
-            const content = await callGroq(messages, params.model || GROQ_MODEL, process.env.GROQ_API_KEY, isJson);
+            const content = await callGroq(messages, params.model || GROQ_MODEL, process.env.GROQ_API_KEY, isJson, params.image);
             return { choices: [{ message: { content } }] };
           } catch {
             // Fallback

@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals
 
 // Mock dependencies
 jest.mock('@server/db');
-jest.mock('openai');
+jest.mock('gemini');
 jest.mock('@google-cloud/vision');
 
 describe('API Routes Integration Tests', () => {
@@ -262,7 +262,7 @@ describe('API Routes Integration Tests', () => {
   });
 
   describe('Rate Limiting', () => {
-    it('should implement rate limiting for OpenAI endpoints', async () => {
+    it('should implement rate limiting for Gemini endpoints', async () => {
       // This would test actual rate limiting implementation
       // For now, just ensure the endpoint exists
       const response = await request(app)

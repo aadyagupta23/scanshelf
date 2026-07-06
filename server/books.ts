@@ -111,12 +111,17 @@ export async function searchBooksByTitle(title: string): Promise<any[]> {
     }
     
     // Try Google Books API first with exact title search
-    const exactQuery = `intitle:"${encodeURIComponent(title.trim())}"`;
-    const googleBooksUrl = `https://www.googleapis.com/books/v1/volumes?q=${exactQuery}&maxResults=5`;
+    let googleResponse = null;
+    try {
+      const exactQuery = `intitle:"${encodeURIComponent(title.trim())}"`;
+      const apiKeyPart = process.env.GOOGLE_BOOKS_API_KEY ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}` : '';
+      const googleBooksUrl = `https://www.googleapis.com/books/v1/volumes?q=${exactQuery}&maxResults=5${apiKeyPart}`;
+      googleResponse = await axios.get(googleBooksUrl, { timeout: 5000 });
+    } catch (googleError) {
+      log(`Google Books API failed for "${title}": ${googleError instanceof Error ? googleError.message : String(googleError)}. Falling back...`, 'books');
+    }
     
-    const googleResponse = await axios.get(googleBooksUrl);
-    
-    if (googleResponse.data.items && googleResponse.data.items.length > 0) {
+    if (googleResponse && googleResponse.data.items && googleResponse.data.items.length > 0) {
       log(`Found ${googleResponse.data.items.length} results for "${title}"`);
       
       // Map the Google Books results
@@ -153,13 +158,13 @@ export async function searchBooksByTitle(title: string): Promise<any[]> {
         detectedFrom: string;
       }
       
-      // Process all books - CLEAR ratings from Google Books and OpenAI will provide them
+      // Process all books - CLEAR ratings from Google Books and Gemini will provide them
       const booksWithoutRatings = await Promise.all(
         books.map(async (book: BookObject) => {
-          // IMPORTANT: Don't use Google Books ratings - OpenAI will provide them later
+          // IMPORTANT: Don't use Google Books ratings - Gemini will provide them later
           // Clear any ratings that might have come from Google Books
           book.rating = '';
-          log(`Cleared Google Books rating for "${book.title}" - will be replaced with OpenAI rating`);
+          log(`Cleared Google Books rating for "${book.title}" - will be replaced with Gemini rating`);
           return book;
         })
       );
@@ -196,13 +201,13 @@ export async function searchBooksByTitle(title: string): Promise<any[]> {
       
       // Reuse our BookObject interface from above
       
-      // Process books - CLEAR ratings from Open Library and OpenAI will provide them
+      // Process books - CLEAR ratings from Open Library and Gemini will provide them
       const booksWithoutRatings = await Promise.all(
         books.map(async (book: any) => {
-          // IMPORTANT: Don't use Open Library ratings - OpenAI will provide them later
+          // IMPORTANT: Don't use Open Library ratings - Gemini will provide them later
           // Clear any ratings that might have come from Open Library
           book.rating = '';
-          log(`Cleared ratings for "${book.title}" - will be replaced with OpenAI rating`);
+          log(`Cleared ratings for "${book.title}" - will be replaced with Gemini rating`);
           
           // Clear any summaries that might have come from Open Library
           book.summary = '';

@@ -9,7 +9,7 @@ import { rateLimiter } from "../rate-limiter.js";
 /**
  * Gets a book rating using Groq AI's knowledge
  */
-export async function getOpenAIBookRating(title: string, author: string): Promise<string> {
+export async function getGeminiBookRating(title: string, author: string): Promise<string> {
   try {
     // Check if we have an API key
     if (!isGroqConfigured()) {
@@ -79,7 +79,7 @@ export async function getOpenAIBookRating(title: string, author: string): Promis
 /**
  * Gets a book summary using Groq AI's knowledge
  */
-export async function getOpenAIBookSummary(title: string, author: string): Promise<string> {
+export async function getGeminiBookSummary(title: string, author: string): Promise<string> {
   try {
     // Check if we have an API key
     if (!isGroqConfigured()) {

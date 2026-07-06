@@ -2,7 +2,7 @@ import { bookCacheService } from './book-cache-service';
 import { log } from './simple-logger.js';
 
 /**
- * Interface for OpenAI-enhanced book info
+ * Interface for Gemini-enhanced book info
  */
 export interface EnhancedBookInfo {
   title: string;
@@ -16,10 +16,10 @@ export interface EnhancedBookInfo {
 }
 
 /**
- * Get book details with OpenAI-enhanced rating and summary
- * This function guarantees OpenAI-generated content for both rating and summary
+ * Get book details with Gemini-enhanced rating and summary
+ * This function guarantees Gemini-generated content for both rating and summary
  */
-export async function getOpenAIBookDetails(
+export async function getGeminiBookDetails(
   title: string,
   author: string,
   isbn?: string
@@ -28,8 +28,8 @@ export async function getOpenAIBookDetails(
     // Check cache first to avoid API calls if possible
     const cachedBook = await bookCacheService.findInCache(title, author);
     
-    if (cachedBook && cachedBook.rating && cachedBook.summary && cachedBook.source === 'openai') {
-      log(`Using cached OpenAI book data for "${title}" by ${author}`, 'books');
+    if (cachedBook && cachedBook.rating && cachedBook.summary && cachedBook.source === 'gemini') {
+      log(`Using cached Gemini book data for "${title}" by ${author}`, 'books');
       
       return {
         title: cachedBook.title,
@@ -39,7 +39,7 @@ export async function getOpenAIBookDetails(
         summary: cachedBook.summary,
         rating: cachedBook.rating,
         fromCache: true,
-        source: 'openai'
+        source: 'gemini'
       };
     }
     
@@ -49,38 +49,38 @@ export async function getOpenAIBookDetails(
       author,
       isbn,
       fromCache: false,
-      source: 'openai'
+      source: 'gemini'
     };
     
-    // Get OpenAI-generated rating
+    // Get Gemini-generated rating
     try {
-      log(`Getting OpenAI rating for "${title}" by ${author}`, 'books');
+      log(`Getting Gemini rating for "${title}" by ${author}`, 'books');
       const rating = await bookCacheService.getEnhancedRating(title, author, isbn);
       
       if (rating) {
         bookInfo.rating = rating;
-        log(`Got OpenAI rating for "${title}": ${rating}`, 'books');
+        log(`Got Gemini rating for "${title}": ${rating}`, 'books');
       }
     } catch (error) {
-      log(`Error getting OpenAI rating for "${title}": ${error instanceof Error ? error.message : String(error)}`, 'books');
+      log(`Error getting Gemini rating for "${title}": ${error instanceof Error ? error.message : String(error)}`, 'books');
     }
     
-    // Get OpenAI-generated summary
+    // Get Gemini-generated summary
     try {
-      log(`Getting OpenAI summary for "${title}" by ${author}`, 'books');
+      log(`Getting Gemini summary for "${title}" by ${author}`, 'books');
       const summary = await bookCacheService.getEnhancedSummary(title, author);
       
       if (summary) {
         bookInfo.summary = summary;
-        log(`Got OpenAI summary for "${title}"`, 'books');
+        log(`Got Gemini summary for "${title}"`, 'books');
       }
     } catch (error) {
-      log(`Error getting OpenAI summary for "${title}": ${error instanceof Error ? error.message : String(error)}`, 'books');
+      log(`Error getting Gemini summary for "${title}": ${error instanceof Error ? error.message : String(error)}`, 'books');
     }
     
     return bookInfo;
   } catch (error) {
-    log(`Error getting OpenAI book details: ${error instanceof Error ? error.message : String(error)}`, 'books');
+    log(`Error getting Gemini book details: ${error instanceof Error ? error.message : String(error)}`, 'books');
     
     // Return minimal info if error occurs
     return {

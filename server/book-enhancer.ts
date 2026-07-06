@@ -3,12 +3,12 @@ import { storage } from './storage';
 import { log } from './simple-logger.js';
 
 /**
- * Utility for enhancing book information with OpenAI-generated content
+ * Utility for enhancing book information with Gemini-generated content
  * This provides a way to improve existing books with high-quality summaries and ratings
  */
 export class BookEnhancer {
   /**
-   * Enhances a set of books with OpenAI-generated summaries and ratings
+   * Enhances a set of books with Gemini-generated summaries and ratings
    * Uses caching to avoid redundant API calls
    */
   async enhanceBooks(books: Array<{
@@ -38,29 +38,29 @@ export class BookEnhancer {
           // Check if this book exists in cache with enhanced content
           const cachedBook = await storage.findBookInCache(book.title, book.author);
           
-          // Check for OpenAI-generated data in cache
+          // Check for Gemini-generated data in cache
           if (cachedBook) {
-            // Only use the summary if it comes from OpenAI
-            if (cachedBook.summary && cachedBook.source === 'openai') {
+            // Only use the summary if it comes from Gemini
+            if (cachedBook.summary && cachedBook.source === 'gemini') {
               enhancedBook.summary = cachedBook.summary;
               enhancedBook.enhanced = true;
-              log(`Using cached OpenAI summary for "${book.title}"`, 'enhancer');
+              log(`Using cached Gemini summary for "${book.title}"`, 'enhancer');
             }
             
-            // Only use the rating if it comes from OpenAI
-            if (cachedBook.rating && cachedBook.source === 'openai') {
+            // Only use the rating if it comes from Gemini
+            if (cachedBook.rating && cachedBook.source === 'gemini') {
               enhancedBook.rating = cachedBook.rating;
               enhancedBook.enhanced = true;
-              log(`Using cached OpenAI rating for "${book.title}": ${cachedBook.rating}`, 'enhancer');
+              log(`Using cached Gemini rating for "${book.title}": ${cachedBook.rating}`, 'enhancer');
             }
             
-            // If we have complete OpenAI data, return early
+            // If we have complete Gemini data, return early
             if (enhancedBook.summary && enhancedBook.rating) {
               return enhancedBook;
             }
           }
           
-          // Generate missing data with OpenAI
+          // Generate missing data with Gemini
           
           // Get enhanced rating if missing
           if (!enhancedBook.rating) {
@@ -69,21 +69,21 @@ export class BookEnhancer {
               if (rating) {
                 enhancedBook.rating = rating;
                 enhancedBook.enhanced = true;
-                log(`Enhanced rating for "${book.title}" with OpenAI data`, 'enhancer');
+                log(`Enhanced rating for "${book.title}" with Gemini data`, 'enhancer');
               }
             } catch (error) {
               log(`Error enhancing rating for "${book.title}": ${error instanceof Error ? error.message : String(error)}`, 'enhancer');
             }
           }
           
-          // Only get enhanced summary if we don't already have a good one from OpenAI
+          // Only get enhanced summary if we don't already have a good one from Gemini
           if (!enhancedBook.summary) {
             try {
               const summary = await bookCacheService.getEnhancedSummary(book.title, book.author);
               if (summary) {
                 enhancedBook.summary = summary;
                 enhancedBook.enhanced = true;
-                log(`Enhanced summary for "${book.title}" with OpenAI data`, 'enhancer');
+                log(`Enhanced summary for "${book.title}" with Gemini data`, 'enhancer');
               }
             } catch (error) {
               log(`Error enhancing summary for "${book.title}": ${error instanceof Error ? error.message : String(error)}`, 'enhancer');
@@ -102,7 +102,7 @@ export class BookEnhancer {
   }
   
   /**
-   * Enhances a single book with OpenAI-generated summary and rating
+   * Enhances a single book with Gemini-generated summary and rating
    * Returns a new object with the enhanced data
    */
   async enhanceBook(book: {
@@ -125,7 +125,7 @@ export class BookEnhancer {
   
   /**
    * Enhances saved books for a device
-   * This takes the books from storage and enhances them with OpenAI data
+   * This takes the books from storage and enhances them with Gemini data
    */
   async enhanceSavedBooks(deviceId: string): Promise<number> {
     try {
@@ -181,7 +181,7 @@ export class BookEnhancer {
             continue;
           }
           
-          // Generate missing data with OpenAI and update the book
+          // Generate missing data with Gemini and update the book
           let updated = false;
           
           // Get enhanced rating if missing
@@ -242,7 +242,7 @@ export class BookEnhancer {
         coverUrl: book.coverUrl,
         rating: book.rating,
         summary: book.summary,
-        source: 'openai',
+        source: 'gemini',
         metadata: null
       });
       

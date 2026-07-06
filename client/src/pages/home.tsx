@@ -14,7 +14,7 @@ export default function Home() {
         </p>
         <div className="flex flex-wrap gap-3">
           <Link href="/books">
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white font-medium dark:bg-violet-600 dark:hover:bg-violet-500">
+            <Button>
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
                 width="24" 
@@ -40,7 +40,7 @@ export default function Home() {
         <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-start">
-              <div className="bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 h-10 w-10 rounded-full flex items-center justify-center mr-4 shrink-0">
+              <div className="bg-primary/10 dark:bg-primary/20 text-primary h-10 w-10 rounded-full flex items-center justify-center mr-4 shrink-0">
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
                   width="24" 
@@ -109,7 +109,7 @@ export default function Home() {
       </div>
 
       <div className="mt-16 text-center">
-        <div className="inline-flex justify-center items-center bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 h-12 w-12 rounded-full mb-4">
+        <div className="inline-flex justify-center items-center bg-primary/10 dark:bg-primary/20 text-primary h-12 w-12 rounded-full mb-4">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             width="24" 
@@ -132,7 +132,7 @@ export default function Home() {
           Never miss a great book again. Our app helps you quickly find books that match your unique reading preferences even in a crowded bookshelf.
         </p>
         <Link href="/books" onClick={() => window.scrollTo(0, 0)}>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white font-medium dark:bg-violet-600 dark:hover:bg-violet-500">
+          <Button>
             Get Started Now
           </Button>
         </Link>
@@ -143,7 +143,7 @@ export default function Home() {
         <div className="flex flex-col md:flex-row justify-center items-center text-xs text-gray-500 dark:text-gray-400 space-y-2 md:space-y-0 md:space-x-6">
           <span>© {new Date().getFullYear()} Scanshelf. All rights reserved.</span>
           <Link href="/privacy-policy">
-            <span className="hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Privacy Policy</span>
+            <span className="hover:text-primary transition-colors">Privacy Policy</span>
           </Link>
         </div>
       </div>

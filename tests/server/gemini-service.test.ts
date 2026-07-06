@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
-// Mock OpenAI
-const mockOpenAI = {
+// Mock Gemini
+const mockGemini = {
   chat: {
     completions: {
       create: jest.fn()
@@ -9,11 +9,11 @@ const mockOpenAI = {
   }
 };
 
-jest.mock('openai', () => ({
-  OpenAI: jest.fn().mockImplementation(() => mockOpenAI)
+jest.mock('gemini', () => ({
+  Gemini: jest.fn().mockImplementation(() => mockGemini)
 }));
 
-describe('OpenAI Service', () => {
+describe('Gemini Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -40,7 +40,7 @@ describe('OpenAI Service', () => {
         }]
       };
 
-      (mockOpenAI.chat.completions.create as any).mockResolvedValue(mockResponse);
+      (mockGemini.chat.completions.create as any).mockResolvedValue(mockResponse);
 
       const userPreferences = {
         genres: ['Science Fiction', 'Adventure'],
@@ -50,9 +50,9 @@ describe('OpenAI Service', () => {
 
       const detectedBooks = ['The Expanse', 'Ender\'s Game'];
 
-      // Test would call actual OpenAI service function here
+      // Test would call actual Gemini service function here
       // For now, just test the mock setup
-      const result = await mockOpenAI.chat.completions.create({
+      const result = await mockGemini.chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -66,18 +66,18 @@ describe('OpenAI Service', () => {
         ]
       });
 
-      expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(1);
+      expect(mockGemini.chat.completions.create).toHaveBeenCalledTimes(1);
       expect((result as any).choices[0].message.content).toContain('The Martian');
     });
 
-    it('should handle OpenAI API errors gracefully', async () => {
-      const error = new Error('OpenAI API rate limit exceeded');
-      (mockOpenAI.chat.completions.create as any).mockRejectedValue(error);
+    it('should handle Gemini API errors gracefully', async () => {
+      const error = new Error('Gemini API rate limit exceeded');
+      (mockGemini.chat.completions.create as any).mockRejectedValue(error);
 
-      await expect(mockOpenAI.chat.completions.create({})).rejects.toThrow('OpenAI API rate limit exceeded');
+      await expect(mockGemini.chat.completions.create({})).rejects.toThrow('Gemini API rate limit exceeded');
     });
 
-    it('should validate response format from OpenAI', async () => {
+    it('should validate response format from Gemini', async () => {
       const invalidResponse = {
         choices: [{
           message: {
@@ -86,9 +86,9 @@ describe('OpenAI Service', () => {
         }]
       };
 
-      (mockOpenAI.chat.completions.create as any).mockResolvedValue(invalidResponse as any);
+      (mockGemini.chat.completions.create as any).mockResolvedValue(invalidResponse as any);
 
-      const result = await mockOpenAI.chat.completions.create({});
+      const result = await mockGemini.chat.completions.create({});
       
       expect(() => {
         JSON.parse((result as any).choices[0].message.content);
@@ -113,7 +113,7 @@ describe('OpenAI Service', () => {
         }]
       };
 
-      (mockOpenAI.chat.completions.create as any).mockResolvedValue(mockSummaryResponse as any);
+      (mockGemini.chat.completions.create as any).mockResolvedValue(mockSummaryResponse as any);
 
       const bookData = {
         title: 'Dune',
@@ -121,7 +121,7 @@ describe('OpenAI Service', () => {
         basicSummary: 'A science fiction novel set on a desert planet.'
       };
 
-      const result = await mockOpenAI.chat.completions.create({
+      const result = await mockGemini.chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -135,7 +135,7 @@ describe('OpenAI Service', () => {
         ]
       });
 
-      expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(1);
+      expect(mockGemini.chat.completions.create).toHaveBeenCalledTimes(1);
       const response = JSON.parse((result as any).choices[0].message.content);
       expect(response.title).toBe('Dune');
       expect(response.enhancedSummary).toBeDefined();
@@ -144,25 +144,25 @@ describe('OpenAI Service', () => {
   });
 
   describe('Rate Limiting', () => {
-    it('should respect OpenAI rate limits', async () => {
+    it('should respect Gemini rate limits', async () => {
       const rateLimitError = new Error('Rate limit exceeded');
       rateLimitError.name = 'RateLimitError';
       
-      (mockOpenAI.chat.completions.create as any).mockRejectedValue(rateLimitError as any);
+      (mockGemini.chat.completions.create as any).mockRejectedValue(rateLimitError as any);
 
-      await expect(mockOpenAI.chat.completions.create({})).rejects.toThrow('Rate limit exceeded');
+      await expect(mockGemini.chat.completions.create({})).rejects.toThrow('Rate limit exceeded');
     });
 
     it('should implement exponential backoff for retries', async () => {
       // First call fails, second succeeds
-      (mockOpenAI.chat.completions.create as any)
+      (mockGemini.chat.completions.create as any)
         .mockRejectedValueOnce(new Error('Rate limit exceeded') as any)
         .mockResolvedValueOnce({
           choices: [{ message: { content: 'Success' } }]
         } as any);
 
       // Test retry logic would go here
-      expect(mockOpenAI.chat.completions.create).toBeDefined();
+      expect(mockGemini.chat.completions.create).toBeDefined();
     });
   });
 

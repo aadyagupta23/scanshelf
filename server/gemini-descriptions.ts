@@ -22,7 +22,7 @@ const PREDEFINED_DESCRIPTIONS: Record<string, string> = {
  * @param author Book author
  * @returns A concise AI-generated book description
  */
-export async function getOpenAIDescription(title: string, author: string): Promise<string> {
+export async function getGeminiDescription(title: string, author: string): Promise<string> {
   try {
     // Create a cache key
     const cacheKey = `${title}|${author}`.toLowerCase();
@@ -123,7 +123,7 @@ const PREDEFINED_MATCH_REASONS: Record<string, string> = {
   "the night circus|erin morgenstern|": "This enchanting novel creates a captivating world of magic and competition, with beautiful prose and intricate storytelling that appeals to readers who enjoy immersive fiction."
 };
 
-export async function getOpenAIMatchReason(
+export async function getGeminiMatchReason(
   title: string, 
   author: string, 
   userPreferences: { genres?: string[], authors?: string[] }

@@ -111,13 +111,13 @@ export class BookCacheService {
     rating?: string;
     summary?: string;
     metadata?: any;
-    source?: 'google' | 'amazon' | 'openai' | 'saved';
+    source?: 'google' | 'amazon' | 'gemini' | 'saved';
     expiresAt?: Date;
   }): Promise<BookCache> {
-    let source: 'google' | 'amazon' | 'openai' | 'saved';
+    let source: 'google' | 'amazon' | 'gemini' | 'saved';
     
     if (bookData.summary || bookData.rating) {
-      source = 'openai';
+      source = 'gemini';
     } else {
       source = bookData.source || 'google';
     }
@@ -144,7 +144,7 @@ export class BookCacheService {
         switch (source) {
           case 'google': expirationMs = CACHE_DURATION.GOOGLE; break;
           case 'amazon': expirationMs = CACHE_DURATION.AMAZON; break;
-          case 'openai': expirationMs = CACHE_DURATION.GROQ; break;
+          case 'gemini': expirationMs = CACHE_DURATION.GROQ; break;
           case 'saved': expirationMs = CACHE_DURATION.GROQ; break;
         }
         
@@ -249,7 +249,7 @@ export class BookCacheService {
       
       // Look for cached summary first - prioritize AI content
       const cachedBook = await this.findInCache(title, author);
-      if (cachedBook?.summary && cachedBook.source === 'openai') {
+      if (cachedBook?.summary && cachedBook.source === 'gemini') {
         log(`Using cached AI summary for "${title}"`, 'cache');
         return cachedBook.summary;
       }
@@ -290,7 +290,7 @@ export class BookCacheService {
           await db.update(bookCache)
             .set({
               summary: summary,
-              source: 'openai',
+              source: 'gemini',
               expiresAt
             })
             .where(eq(bookCache.id, existingBook.id))
@@ -300,7 +300,7 @@ export class BookCacheService {
             title: title.trim(),
             author: author.trim(),
             summary,
-            source: 'openai' as const,
+            source: 'gemini' as const,
             isbn: undefined,
             coverUrl: undefined,
             rating: undefined,
@@ -332,7 +332,7 @@ export class BookCacheService {
     try {
       // Check for cached rating first
       const cachedBook = await this.findInCache(title, author);
-      if (cachedBook?.rating && cachedBook.source === 'openai') {
+      if (cachedBook?.rating && cachedBook.source === 'gemini') {
         log(`Using cached AI rating for "${title}": ${cachedBook.rating}`, 'cache');
         return cachedBook.rating;
       }
@@ -350,7 +350,7 @@ export class BookCacheService {
               author,
               isbn,
               rating: isbnBook.rating,
-              source: isbnBook.source || 'openai'
+              source: isbnBook.source || 'gemini'
             });
             
             return isbnBook.rating;
@@ -412,7 +412,7 @@ export class BookCacheService {
       const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
       
       if (existingBook) {
-        const sourceToUse = isAIRating ? 'openai' : existingBook.source || 'google';
+        const sourceToUse = isAIRating ? 'gemini' : existingBook.source || 'google';
         
         await db.update(bookCache)
           .set({
@@ -424,14 +424,14 @@ export class BookCacheService {
           .where(eq(bookCache.id, existingBook.id))
           .returning();
       } else {
-        const sourceToUse = isAIRating ? 'openai' : 'google';
+        const sourceToUse = isAIRating ? 'gemini' : 'google';
         
         const cacheData = {
           title: title.trim(),
           author: author.trim(),
           isbn: isbn || undefined,
           rating: rating,
-          source: sourceToUse as 'google' | 'amazon' | 'openai' | 'saved',
+          source: sourceToUse as 'google' | 'amazon' | 'gemini' | 'saved',
           coverUrl: undefined,
           summary: undefined,
           metadata: undefined,
@@ -463,14 +463,14 @@ export class BookCacheService {
   /**
    * Removes non-AI ratings from the cache
    */
-  async cleanupNonOpenAIRatings(): Promise<number> {
+  async cleanupNonGeminiRatings(): Promise<number> {
     try {
       const entries = await db.select().from(bookCache)
         .where(
           and(
             isNotNull(bookCache.rating),
             or(
-              not(eq(bookCache.source, 'openai')),
+              not(eq(bookCache.source, 'gemini')),
               isNull(bookCache.source)
             )
           )

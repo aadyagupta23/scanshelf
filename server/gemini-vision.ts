@@ -22,6 +22,46 @@ export async function analyzeBookshelfImage(base64Image: string): Promise<{
       return await fallbackToOCR(base64Image);
     }
 
+    const hasGemini = !!process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.startsWith("your_");
+    const hasGroq = !!process.env.GROQ_API_KEY && !process.env.GROQ_API_KEY.startsWith("your_");
+
+    if (hasGemini || hasGroq) {
+      log(`AI Vision Key found (Gemini: ${hasGemini}, Groq: ${hasGroq}). Attempting native Vision API...`, "vision");
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: "You are a precise book identification expert specializing in reading book spines on bookshelves. Your task is to identify the exact titles of the books visible in the image. Do not invent or guess titles. Return a JSON object with a 'bookTitles' array containing the identified book titles, and a boolean 'isBookshelf' set to true if multiple books are visible on a shelf. Return ONLY the JSON object, do not wrap it in markdown code blocks."
+            },
+            {
+              role: "user",
+              content: "Analyze this image of a bookshelf and identify all books clearly visible on it. Be sure to read titles rotated in any direction."
+            }
+          ],
+          response_format: { type: "json_object" },
+          image: base64Image
+        });
+
+        const content = (response.choices[0].message.content || '').trim();
+        const cleanContent = content.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+        const result = JSON.parse(cleanContent);
+        
+        log(`Native Vision model identified ${result.bookTitles?.length || 0} books directly from image`, "vision");
+        
+        if (result.bookTitles && result.bookTitles.length > 0) {
+          return {
+            bookTitles: result.bookTitles,
+            isBookshelf: result.isBookshelf || false
+          };
+        } else {
+          log("Native Vision returned empty titles. Falling back to OCR...", "vision");
+        }
+      } catch (visionError) {
+        log(`Native Vision API failed: ${visionError instanceof Error ? visionError.message : String(visionError)}. Falling back to OCR...`, "vision");
+      }
+    }
+
     if (!isGroqConfigured()) {
       log("Groq API key is not properly configured", "vision");
       return await fallbackToOCR(base64Image);

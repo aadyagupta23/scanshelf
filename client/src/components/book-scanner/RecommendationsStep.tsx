@@ -3,7 +3,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import StarRating from "@/components/ui/star-rating";
-import AffiliateDisclosure from "@/components/ui/affiliate-disclosure";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface Recommendation {
@@ -166,7 +165,7 @@ export default function RecommendationsStep({ recommendations, isLoading = false
               <p className="mb-2">"{book.title}" has been added to your reading list.</p>
               <a 
                 href="/reading-list" 
-                className="text-purple-600 hover:text-purple-800 underline"
+                className="text-primary hover:text-primary/80 underline"
                 onClick={() => {
                   // Close the toast when clicking the link
                   toast({ title: "", description: "", variant: "default" });
@@ -239,10 +238,6 @@ export default function RecommendationsStep({ recommendations, isLoading = false
 
   return (
     <div className="pb-12">
-      {/* Affiliate Disclosure */}
-      <div className="mb-4">
-        <AffiliateDisclosure className="mb-0" />
-      </div>
       
       <h3 className="text-lg font-semibold mb-4">Book Matches Based on Your Preferences</h3>
       <p className="text-slate-400 mb-4">
@@ -301,16 +296,16 @@ export default function RecommendationsStep({ recommendations, isLoading = false
         <div className="space-y-12">
           {/* Check if all books have been read */}
           {recommendations.every(book => isBookAlreadyRead(book)) ? (
-            <div className="text-center py-16 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-8 shadow-sm border border-purple-200">
-              <div className="h-20 w-20 mx-auto mb-4 text-purple-400">
+            <div className="text-center py-16 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-8 shadow-sm border border-primary/20">
+              <div className="h-20 w-20 mx-auto mb-4 text-primary/60">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-full h-full">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-purple-800">You've read all these books!</h3>
-              <p className="text-purple-600 mb-6">Great job! All the books we detected in your photo are already in your reading history. Try scanning a different bookshelf or ask friends for their recommendations.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">You've read all these books!</h3>
+              <p className="text-primary/80 mb-6">Great job! All the books we detected in your photo are already in your reading history. Try scanning a different bookshelf or ask friends for their recommendations.</p>
               <Button 
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => window.location.reload()}
               >
                 Scan More Books
@@ -395,9 +390,9 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                               
                               {/* Display match reason in second person format only when available */}
                               {book.matchReason && book.matchReason.trim() !== "" && book.matchReason !== "using fallback algo" && (
-                                <div className="mt-2 mb-3 text-sm bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/30 dark:to-violet-900/30 p-3 rounded-md border border-purple-100 dark:border-purple-800">
-                                  <p className="text-purple-800 dark:text-purple-300 font-medium mb-1">Why This Matches You:</p>
-                                  <p className="text-purple-700 dark:text-purple-400">
+                                <div className="mt-2 mb-3 text-sm bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-3 rounded-md border border-primary/20 dark:border-primary/80">
+                                  <p className="text-primary font-medium mb-1">Why This Matches You:</p>
+                                  <p className="text-primary dark:text-primary-foreground/90">
                                     {book.matchReason.replace(/the user's/gi, "your")
                                       .replace(/user has/gi, "you have")
                                       .replace(/user likes/gi, "you like")
@@ -483,8 +478,8 @@ export default function RecommendationsStep({ recommendations, isLoading = false
               {/* Books You've Already Read section */}
               {goodreadsData && goodreadsData.length > 0 && recommendations.some(book => isBookAlreadyRead(book)) && (
                 <div className="mt-12">
-                  <h3 className="text-xl font-semibold mb-4 text-purple-700 dark:text-purple-400">Books You've Already Read</h3>
-                  <p className="text-slate-400 mb-4">
+                  <h3 className="text-xl font-semibold mb-4 text-primary dark:text-primary-foreground">Books You've Already Read</h3>
+                  <p className="text-neutral-500 mb-4">
                     We detected these books in your photo, but it looks like you've already read them according to your Goodreads data.
                   </p>
                   <div className="grid grid-cols-1 gap-6">
@@ -493,10 +488,10 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                       .map((book, index) => (
                         <div 
                           key={`read-${index}`} 
-                          className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                          className="bg-primary/5 dark:bg-primary/10 border border-primary/15 dark:border-primary/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                         >
                           <div className="md:flex">
-                            <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-purple-200 dark:border-purple-800">
+                            <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-primary/15 dark:border-primary/50">
                               {book.coverUrl ? (
                                 <div className="relative">
                                   <img 
@@ -514,7 +509,7 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                                   <div className="absolute inset-0 rounded-md shadow-inner"></div>
                                 </div>
                               ) : (
-                                <div className="w-24 h-36 md:w-32 md:h-48 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 flex items-center justify-center rounded-md shadow-sm">
+                                <div className="w-24 h-36 md:w-32 md:h-48 bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 flex items-center justify-center rounded-md shadow-sm">
                                   <svg 
                                     xmlns="http://www.w3.org/2000/svg" 
                                     width="24" 
@@ -525,7 +520,7 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                                     strokeWidth="2" 
                                     strokeLinecap="round" 
                                     strokeLinejoin="round" 
-                                    className="h-8 w-8 text-purple-400"
+                                    className="h-8 w-8 text-primary/60"
                                   >
                                     <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
                                   </svg>
@@ -536,7 +531,7 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                                 <div className="mt-3 flex items-center">
                                   {renderRating(book.rating)}
                                 </div>
-                                <span className="mt-2 text-xs font-medium px-2 py-0.5 rounded bg-purple-200 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300">
+                                <span className="mt-2 text-xs font-medium px-2 py-0.5 rounded bg-primary/20 dark:bg-primary/30 text-primary dark:text-primary-foreground">
                                   Already Read
                                 </span>
                               </div>
@@ -553,7 +548,7 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                                   {book.summary && book.summary.length > 240 && (
                                     <button 
                                       onClick={() => toggleExpand(index + 1000)}
-                                      className="mt-2 text-purple-600 hover:text-purple-800 text-sm flex items-center font-medium"
+                                      className="mt-2 text-primary hover:text-primary/80 text-sm flex items-center font-medium"
                                     >
                                       {expandedBooks.includes(index + 1000) ? (
                                         <>

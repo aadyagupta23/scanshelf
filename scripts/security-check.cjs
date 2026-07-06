@@ -21,7 +21,7 @@ const SECURITY_PATTERNS = [
   },
   {
     pattern: /sk-[a-zA-Z0-9]+/g,
-    description: 'Potential OpenAI API key',
+    description: 'Potential Gemini API key',
     severity: 'CRITICAL'
   },
   {

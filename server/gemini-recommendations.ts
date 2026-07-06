@@ -11,7 +11,7 @@ import { rateLimiter } from './rate-limiter.js';
  * @param _deviceId Optional user device ID for analytics (unused)
  * @returns Array of book recommendations
  */
-export async function getOpenAIRecommendations(
+export async function getGeminiRecommendations(
   userBooks: Array<{ title: string, author: string }>,
   preferences: { genres?: string[], authors?: string[], goodreadsData?: any } = {},
   _deviceId?: string
@@ -122,7 +122,7 @@ CRITICAL INSTRUCTIONS:
 2. Do NOT invent or suggest books that are not in the provided list
 3. Do NOT recommend books that are similar but not on the list
 4. The ONLY valid recommendations are books EXPLICITLY listed in the JSON array I will provide
-5. If you can't find 5 good recommendations from the list, return fewer recommendations
+5. Recommend at least 3 books. You may recommend more (up to 7) only if they closely align with the user's stated genres, authors, or reading preferences.
 6. Base your selections on how well each book aligns with the user's stated genre preferences, favorite authors, and reading history
 7. If the user has a "Want to Read" list from Goodreads, PRIORITIZE books that are similar to those on their list
 8. For each book, provide a SPECIFIC, CONCISE reason (1-2 sentences) explaining the match
@@ -139,7 +139,7 @@ ${bookListJSON}
 My reading preferences:
 ${userPreferencesText || "I'm open to discovering interesting books from various genres."}
 
-From ONLY this list above, recommend the 5 books that would best match my reading preferences.
+From ONLY this list above, recommend at least 3 books (up to 7, only if they closely align with my reading preferences) that best match my preferences.
 
 Format your response as a JSON object with a "recommendations" array containing ONLY books from my list.
 Each recommendation should include:

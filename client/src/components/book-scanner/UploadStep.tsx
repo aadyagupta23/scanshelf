@@ -16,10 +16,11 @@ interface UploadStepProps {
   onBooksDetected: (books: Book[], imageBase64: string) => void;
   detectedBooks: Book[];
   onGetRecommendations?: () => void;
+  onReset?: () => void;
   isLoading?: boolean;
 }
 
-export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecommendations, isLoading = false }: UploadStepProps) {
+export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecommendations, onReset, isLoading = false }: UploadStepProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string>("");
@@ -466,7 +467,7 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
           >
             {!isUploading && !isProcessing && !uploadedImage ? (
               <>
-                <div className="h-12 w-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4">
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     width="24" 
@@ -477,7 +478,7 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="h-6 w-6 text-violet-600 dark:text-violet-400"
+                    className="h-6 w-6 text-primary"
                   >
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
                     <line x1="16" x2="22" y1="5" y2="5" />
@@ -496,7 +497,7 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button 
                       onClick={startCamera}
-                      className="bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500 text-white flex items-center gap-2"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2"
                     >
                       <Camera className="h-4 w-4" />
                       Take Photo
@@ -504,7 +505,7 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
                     <Button 
                       onClick={() => document.getElementById("book-image")?.click()}
                       variant="outline"
-                      className="border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-600 dark:text-violet-300 dark:hover:bg-violet-900/20"
+                      className="border-primary/30 text-primary hover:bg-primary/10 dark:border-primary/60 dark:text-primary-foreground dark:hover:bg-primary/20"
                     >
                       Choose from Gallery
                     </Button>
@@ -513,7 +514,7 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
                   <div className="relative">
                     <Button 
                       onClick={() => document.getElementById("book-image")?.click()}
-                      className="bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Choose Image
                     </Button>
@@ -530,13 +531,13 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
               </>
             ) : isUploading ? (
               <div className="py-12 flex flex-col items-center">
-                <div className="animate-spin h-10 w-10 border-4 border-violet-600 dark:border-violet-400 border-t-transparent rounded-full mb-4"></div>
+                 <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
                 <p className="text-gray-600 dark:text-gray-300">Uploading image...</p>
               </div>
             ) : isProcessing ? (
               <div className="py-12 flex flex-col items-center">
-                <div className="animate-spin h-10 w-10 border-4 border-violet-600 dark:border-violet-400 border-t-transparent dark:border-t-transparent rounded-full mb-4"></div>
-                <p className="text-violet-600 dark:text-violet-400 font-medium mb-1">Analyzing your books</p>
+                 <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+                 <p className="text-primary font-medium mb-1">Analyzing your books</p>
                 <p className="text-gray-600 dark:text-gray-300">This may take a moment...</p>
               </div>
             ) : (
@@ -600,11 +601,20 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
             </div>
 
             {onGetRecommendations && (
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex justify-between gap-4">
+                {onReset && (
+                  <Button 
+                    onClick={onReset}
+                    variant="outline"
+                    className="border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
+                  >
+                    Scan Another Photo
+                  </Button>
+                )}
                 <Button 
                   onClick={onGetRecommendations} 
                   disabled={isLoading}
-                  className="bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground ml-auto"
                 >
                   {isLoading ? (
                     <>

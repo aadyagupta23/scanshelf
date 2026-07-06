@@ -177,7 +177,7 @@ describe('Schema Validation', () => {
     });
 
     test('should handle different valid sources', () => {
-      const sources = ['google', 'amazon', 'openai'];
+      const sources = ['google', 'amazon', 'gemini'];
       
       sources.forEach(source => {
         const validBook = {

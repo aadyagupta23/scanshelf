@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
   try {
     // Import the AI recommendations function
-    const { getOpenAIRecommendations } = await import('../../server/openai-recommendations.js');
+    const { getGeminiRecommendations } = await import('../../server/gemini-recommendations.js');
     const { isGroqConfigured } = await import('../../server/groq-client.js');
     const { log } = await import('../../server/simple-logger.js');
 
@@ -58,20 +58,20 @@ export default async function handler(req, res) {
     log(`Processing recommendation request for ${books.length} books with preferences: ${JSON.stringify(preferences || {})}`, "groq");
     
     try {
-      // Get base recommendations from OpenAI
-      const baseRecommendations = await getOpenAIRecommendations(books, preferences || {}, deviceId);
+      // Get base recommendations from Gemini
+      const baseRecommendations = await getGeminiRecommendations(books, preferences || {}, deviceId);
       
-      // Make sure we received recommendations from OpenAI
+      // Make sure we received recommendations from Gemini
       if (!baseRecommendations || baseRecommendations.length === 0) {
         // If no recommendations were returned, inform the user
-        log("No recommendations returned from OpenAI", "openai");
+        log("No recommendations returned from Gemini", "gemini");
         return res.status(404).json({
           success: false,
           message: "No book recommendations could be generated based on your scanned books. Please try scanning different books."
         });
       }
 
-      // Enhance each recommendation with cached or fresh OpenAI data
+      // Enhance each recommendation with cached or fresh Gemini data
       const enhancedRecommendations = await Promise.all(baseRecommendations.map(async (book) => {
         try {
           // Find the original book from the user's list to get the cover URL
@@ -94,24 +94,24 @@ export default async function handler(req, res) {
           try {
             const { bookCacheService } = await import('../../server/book-cache-service.js');
             
-            // First check if we have this recommendation in cache with OpenAI data
+            // First check if we have this recommendation in cache with Gemini data
             cachedBook = await bookCacheService.findInCache(book.title, book.author);
             
             // If no cached book found, wait a moment and try again (handles race condition)
-            if (!cachedBook || cachedBook.source !== 'openai') {
+            if (!cachedBook || cachedBook.source !== 'gemini') {
               await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
               try {
                 cachedBook = await bookCacheService.findInCache(book.title, book.author);
               } catch (retryError) {
-                log(`Cache retry lookup error: ${retryError instanceof Error ? retryError.message : String(retryError)}`, "openai");
+                log(`Cache retry lookup error: ${retryError instanceof Error ? retryError.message : String(retryError)}`, "gemini");
               }
             }
           } catch (error) {
-            log(`Cache lookup error: ${error instanceof Error ? error.message : String(error)}`, "openai");
+            log(`Cache lookup error: ${error instanceof Error ? error.message : String(error)}`, "gemini");
           }
           
-          if (cachedBook && cachedBook.source === 'openai') {
-            // Use cached OpenAI data if available
+          if (cachedBook && cachedBook.source === 'gemini') {
+            // Use cached Gemini data if available
             if (cachedBook.summary) {
               description = cachedBook.summary;
             }
@@ -121,13 +121,13 @@ export default async function handler(req, res) {
             }
           }
           
-          // If we still don't have a description, get it from OpenAI
+          // If we still don't have a description, get it from Gemini
           if (!description || description.length < 100) {
-            const { getOpenAIDescription } = await import('../../server/openai-descriptions.js');
-            description = await getOpenAIDescription(book.title, book.author);
+            const { getGeminiDescription } = await import('../../server/gemini-descriptions.js');
+            description = await getGeminiDescription(book.title, book.author);
           }
           
-          // If we still don't have a rating, get it from OpenAI
+          // If we still don't have a rating, get it from Gemini
           if (!rating || rating === "0") {
             const { bookCacheService } = await import('../../server/book-cache-service.js');
             rating = await bookCacheService.getEnhancedRating(book.title, book.author, isbn);
@@ -135,13 +135,13 @@ export default async function handler(req, res) {
           
           // Validate rating value
           if (!rating || isNaN(parseFloat(rating))) {
-            log(`Invalid rating detected`, "openai");
+            log(`Invalid rating detected`, "gemini");
           }
           
           // Use the match reason provided directly from the recommendation
           const matchReason = book.matchReason || "This book matches elements of your reading preferences.";
           
-          // Return the enhanced recommendation with OpenAI data
+          // Return the enhanced recommendation with Gemini data
           const enhancedBook = {
             title: book.title,
             author: book.author,
@@ -158,8 +158,8 @@ export default async function handler(req, res) {
           // Log completion
           return enhancedBook;
         } catch (error) {
-          // If there's an error with OpenAI for this specific book, return basic info
-          log(`Book enhancement error: ${error instanceof Error ? error.message : String(error)}`, "openai");
+          // If there's an error with Gemini for this specific book, return basic info
+          log(`Book enhancement error: ${error instanceof Error ? error.message : String(error)}`, "gemini");
           
           // Find the original book from the user's list to get the cover URL (even in error case)
           const originalBook = books.find(b => 
@@ -188,10 +188,10 @@ export default async function handler(req, res) {
         }
       }));
       
-      log(`Successfully enhanced ${enhancedRecommendations.length} recommendations`, "openai");
+      log(`Successfully enhanced ${enhancedRecommendations.length} recommendations`, "gemini");
       return res.status(200).json(enhancedRecommendations);
     } catch (error) {
-      log(`Error generating recommendations: ${error instanceof Error ? error.message : String(error)}`, "openai");
+      log(`Error generating recommendations: ${error instanceof Error ? error.message : String(error)}`, "gemini");
       return res.status(500).json({
         success: false,
         message: "Failed to generate recommendations",

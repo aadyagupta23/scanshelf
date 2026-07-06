@@ -79,7 +79,7 @@ export const createMockFileReader = (result: string) => ({
   error: null
 });
 
-export const createMockOpenAIResponse = (content: any) => ({
+export const createMockGeminiResponse = (content: any) => ({
   choices: [
     {
       message: {
@@ -201,7 +201,7 @@ export const setupTestEnvironment = () => {
   // Set test environment variables
   process.env.NODE_ENV = 'test';
   process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_db';
-  process.env.OPENAI_API_KEY = 'test_openai_key';
+  process.env.GEMINI_API_KEY = 'test_gemini_key';
   process.env.GOOGLE_VISION_API_KEY = 'test_google_key';
   process.env.ADMIN_USERNAME = 'testadmin';
   process.env.ADMIN_PASSWORD_HASH = 'test_hash';

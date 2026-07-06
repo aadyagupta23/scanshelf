@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const formidable = await import('formidable');
     const fs = await import('fs/promises');
     const { storage } = await import('../../server/storage.js');
-    const { analyzeBookshelfImage } = await import('../../server/openai-vision.js');
+    const { analyzeBookshelfImage } = await import('../../server/gemini-vision.js');
     const { searchBooksByTitle } = await import('../../server/books.js');
     
     console.log('Modules imported successfully');

@@ -38,7 +38,7 @@ interface StatsResponse {
     localOcrEnabled: boolean;
   };
   apiMonitoring?: {
-    openai?: {
+    gemini?: {
       configured: boolean;
       status: string;
       failureCount: number;
@@ -368,27 +368,27 @@ export default function AdminPage() {
         {/* API Monitoring Tab */}
         <TabsContent value="monitoring">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* OpenAI API Status Card */}
+            {/* Gemini API Status Card */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Server className="h-5 w-5" />
-                  OpenAI API Status
+                  Gemini API Status
                 </CardTitle>
                 <CardDescription>
                   Current status and monitoring
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {data?.apiMonitoring?.openai && (
+                {data?.apiMonitoring?.gemini && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">Status:</span>
                       <Badge 
-                        variant={data.apiMonitoring.openai.configured ? "outline" : "destructive"}
-                        className={data.apiMonitoring.openai.configured ? "bg-green-100 text-green-800" : ""}
+                        variant={data.apiMonitoring.gemini.configured ? "outline" : "destructive"}
+                        className={data.apiMonitoring.gemini.configured ? "bg-green-100 text-green-800" : ""}
                       >
-                        {data.apiMonitoring.openai.configured ? "Available" : "Not Configured"}
+                        {data.apiMonitoring.gemini.configured ? "Available" : "Not Configured"}
                       </Badge>
                     </div>
                     
@@ -396,12 +396,12 @@ export default function AdminPage() {
                       <div className="flex justify-between items-center">
                         <span>Daily Usage:</span>
                         <span className="font-medium">
-                          {data.apiMonitoring.openai.usageToday} / {data.apiMonitoring.openai.dailyLimit}
+                          {data.apiMonitoring.gemini.usageToday} / {data.apiMonitoring.gemini.dailyLimit}
                         </span>
                       </div>
                       <Progress 
-                        value={data.apiMonitoring.openai.dailyLimit 
-                          ? (data.apiMonitoring.openai.usageToday / data.apiMonitoring.openai.dailyLimit) * 100 
+                        value={data.apiMonitoring.gemini.dailyLimit 
+                          ? (data.apiMonitoring.gemini.usageToday / data.apiMonitoring.gemini.dailyLimit) * 100 
                           : 0} 
                         className="h-2" 
                       />
@@ -412,17 +412,17 @@ export default function AdminPage() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span>Failure Count:</span>
-                          <Badge variant={data.apiMonitoring.openai.failureCount > 0 ? "destructive" : "outline"}>
-                            {data.apiMonitoring.openai.failureCount}
+                          <Badge variant={data.apiMonitoring.gemini.failureCount > 0 ? "destructive" : "outline"}>
+                            {data.apiMonitoring.gemini.failureCount}
                           </Badge>
                         </div>
                         
                         <div className="flex justify-between">
                           <span>Affected Users:</span>
-                          <span>{data.apiMonitoring.openai.affectedUsers}</span>
+                          <span>{data.apiMonitoring.gemini.affectedUsers}</span>
                         </div>
                         
-                        {data.apiMonitoring.openai.isCritical && (
+                        {data.apiMonitoring.gemini.isCritical && (
                           <Alert variant="destructive" className="mt-2">
                             <AlertTriangle className="h-4 w-4" />
                             <AlertTitle>Critical Issue Detected</AlertTitle>
@@ -432,10 +432,10 @@ export default function AdminPage() {
                           </Alert>
                         )}
                         
-                        {data.apiMonitoring.openai.lastFailure && (
+                        {data.apiMonitoring.gemini.lastFailure && (
                           <div className="flex justify-between text-sm text-muted-foreground">
                             <span>Last failure:</span>
-                            <span>{new Date(data.apiMonitoring.openai.lastFailure).toLocaleString()}</span>
+                            <span>{new Date(data.apiMonitoring.gemini.lastFailure).toLocaleString()}</span>
                           </div>
                         )}
                       </div>

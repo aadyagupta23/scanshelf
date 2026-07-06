@@ -71,7 +71,7 @@ export default function Navbar({ sidebarOpen, toggleSidebar }: NavbarProps) {
                   <li>
                     <Link href="/" className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-md font-medium text-sm transition-colors duration-150 ${
                         location === '/' 
-                          ? 'bg-violet-50 dark:bg-violet-900 text-violet-600 dark:text-violet-200' 
+                          ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground' 
                           : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}>
                         <svg 
@@ -95,7 +95,7 @@ export default function Navbar({ sidebarOpen, toggleSidebar }: NavbarProps) {
                   <li>
                     <Link href="/books" className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-md font-medium text-sm transition-colors duration-150 ${
                         location === '/books' 
-                          ? 'bg-violet-50 dark:bg-violet-900 text-violet-600 dark:text-violet-200' 
+                          ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground' 
                           : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}>
                         <svg 
@@ -118,7 +118,7 @@ export default function Navbar({ sidebarOpen, toggleSidebar }: NavbarProps) {
                   <li>
                     <Link href="/reading-list" className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-md font-medium text-sm transition-colors duration-150 ${
                         location === '/reading-list' 
-                          ? 'bg-violet-50 dark:bg-violet-900 text-violet-600 dark:text-violet-200' 
+                          ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground' 
                           : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}>
                         <svg 

@@ -382,7 +382,7 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
               onClick={() => toggleGenre(genre)}
               className={`h-10 px-4 text-sm border rounded-md text-left transition-colors ${
                 selectedGenres.includes(genre)
-                  ? 'bg-violet-100 border-violet-300 text-violet-900 dark:bg-violet-900 dark:border-violet-700 dark:text-violet-100'
+                  ? 'bg-primary/10 border-primary text-primary dark:bg-primary/20 dark:border-primary/80 dark:text-primary-foreground'
                   : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
@@ -401,7 +401,7 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
             value={newAuthor}
             onChange={(e) => setNewAuthor(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addAuthor()}
-            className="flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className="flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             placeholder="Type an author's name"
           />
           <Button
@@ -453,11 +453,11 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
             <p className="text-sm text-gray-600 dark:text-gray-300">Upload your Goodreads export to quickly set your preferences based on your reading history.</p>
             
             {/* Download link and desktop notice */}
-            <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-md border border-purple-200 dark:border-purple-800">
+            <div className="mt-3 p-3 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20 dark:border-primary/80">
               <div className="flex items-start gap-2">
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
-                  className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" 
+                  className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" 
                   fill="none" 
                   viewBox="0 0 24 24" 
                   stroke="currentColor"
@@ -465,18 +465,18 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div className="text-sm">
-                  <p className="text-purple-800 dark:text-purple-300 font-medium mb-1">Need your Goodreads data?</p>
-                  <p className="text-purple-700 dark:text-purple-400 mb-2">
+                  <p className="text-primary dark:text-primary-foreground font-medium mb-1">Need your Goodreads data?</p>
+                  <p className="text-primary dark:text-primary-foreground mb-2">
                     <a 
                       href="https://www.goodreads.com/review/import" 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="underline hover:text-purple-900 dark:hover:text-purple-200 font-medium"
+                      className="underline hover:text-primary/90 dark:hover:text-primary-foreground font-medium"
                     >
                       Download your library here →
                     </a>
                   </p>
-                  <p className="text-purple-600 dark:text-purple-400 text-xs">
+                  <p className="text-primary dark:text-primary-foreground/70 text-xs">
                     📱 Goodreads data can only be downloaded from desktop, sorry for the inconvenience &lt;3
                   </p>
                 </div>
@@ -494,13 +494,13 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
                   file:mr-4 file:py-2 file:px-4
                   file:rounded-md file:border-0
                   file:text-sm file:font-medium
-                  file:bg-violet-50 file:text-violet-700
-                  dark:file:bg-violet-900/30 dark:file:text-violet-300
-                  hover:file:bg-violet-100 dark:hover:file:bg-violet-800/30"
+                  file:bg-primary/10 file:text-primary
+                  dark:file:bg-primary/20 dark:file:text-primary-foreground
+                  hover:file:bg-primary/20 dark:hover:file:bg-primary/30"
               />
             </label>
             {uploading && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Processing your file...</p>}
-            {goodreadsData && <p className="mt-2 text-sm text-violet-600 dark:text-violet-400">✓ Goodreads data imported successfully!</p>}
+            {goodreadsData && <p className="mt-2 text-sm text-primary">✓ Goodreads data imported successfully!</p>}
           </div>
         </Card>
       </div>
@@ -509,7 +509,7 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
         <Button 
           onClick={handleSubmit}
           disabled={isLoading || selectedGenres.length === 0}
-          className="bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {isLoading ? 'Saving...' : 'Continue'}
         </Button>

@@ -20,7 +20,7 @@ export interface BookInfo {
 }
 
 /**
- * Search for books by title with enhanced data from OpenAI
+ * Search for books by title with enhanced data from Gemini
  * Uses caching to avoid redundant API calls
  */
 export async function searchEnhancedBooks(title: string): Promise<BookInfo[]> {
@@ -36,7 +36,7 @@ export async function searchEnhancedBooks(title: string): Promise<BookInfo[]> {
     const cachedBook = await storage.findBookInCache(title, '');
     
     if (cachedBook) {
-      log(`Found "${title}" in cache, but refreshing description with OpenAI`, 'books');
+      log(`Found "${title}" in cache, but refreshing description with Gemini`, 'books');
       
       const bookInfo: BookInfo = {
         title: cachedBook.title,
@@ -49,7 +49,7 @@ export async function searchEnhancedBooks(title: string): Promise<BookInfo[]> {
         categories: cachedBook.metadata ? (cachedBook.metadata as any).categories : undefined
       };
       
-      // Always enhance the book with fresh OpenAI descriptions
+      // Always enhance the book with fresh Gemini descriptions
       return await enhanceBookData([bookInfo]);
     }
     
@@ -64,7 +64,7 @@ export async function searchEnhancedBooks(title: string): Promise<BookInfo[]> {
 /**
  * Search for books using Google Books API - ONLY FOR IMAGES
  * This function follows the requirement to use Google Books API only for images
- * All other data (summaries, ratings) will come from OpenAI
+ * All other data (summaries, ratings) will come from Gemini
  */
 async function searchGoogleBooks(title: string): Promise<BookInfo[]> {
   try {
@@ -90,7 +90,7 @@ async function searchGoogleBooks(title: string): Promise<BookInfo[]> {
         const isbn = item.volumeInfo?.industryIdentifiers?.find((id: any) => id.type === 'ISBN_13')?.identifier || '';
         
         // ONLY INCLUDE ESSENTIAL IDENTIFYING INFO PLUS COVER IMAGE
-        // OpenAI will provide all other data
+        // Gemini will provide all other data
         const bookInfo: BookInfo = {
           title: bookTitle,
           author: bookAuthor,
@@ -102,7 +102,7 @@ async function searchGoogleBooks(title: string): Promise<BookInfo[]> {
         return bookInfo;
       });
       
-      // Enhance the books with OpenAI generated data for summaries and ratings
+      // Enhance the books with Gemini generated data for summaries and ratings
       return await enhanceBookData(books);
     }
     
@@ -118,7 +118,7 @@ async function searchGoogleBooks(title: string): Promise<BookInfo[]> {
 /**
  * Search for books using Open Library API (fallback) - ONLY FOR IMAGES
  * This function follows the requirement to use book APIs only for images
- * All other data (summaries, ratings) will come from OpenAI
+ * All other data (summaries, ratings) will come from Gemini
  */
 async function searchOpenLibrary(title: string): Promise<BookInfo[]> {
   try {
@@ -137,7 +137,7 @@ async function searchOpenLibrary(title: string): Promise<BookInfo[]> {
       // Map Open Library results to our format - ONLY USING BASIC INFO AND COVER IMAGES
       const books = openLibraryResponse.data.docs.map((doc: any) => {
         // ONLY INCLUDE ESSENTIAL IDENTIFYING INFO PLUS COVER IMAGE
-        // OpenAI will provide all other data
+        // Gemini will provide all other data
         const bookInfo: BookInfo = {
           title: doc.title || 'Unknown Title',
           author: doc.author_name ? doc.author_name.join(', ') : 'Unknown Author',
@@ -149,7 +149,7 @@ async function searchOpenLibrary(title: string): Promise<BookInfo[]> {
         return bookInfo;
       });
       
-      // Enhance the books with OpenAI generated data for summaries and ratings
+      // Enhance the books with Gemini generated data for summaries and ratings
       return await enhanceBookData(books);
     }
     
@@ -162,21 +162,21 @@ async function searchOpenLibrary(title: string): Promise<BookInfo[]> {
 }
 
 /**
- * Enhance book data with OpenAI-generated ratings and summaries
- * This function ensures that ALL ratings and summaries come exclusively from OpenAI
+ * Enhance book data with Gemini-generated ratings and summaries
+ * This function ensures that ALL ratings and summaries come exclusively from Gemini
  */
 async function enhanceBookData(books: BookInfo[]): Promise<BookInfo[]> {
   try {
-    // Process all books to enhance them with OpenAI-generated data
+    // Process all books to enhance them with Gemini-generated data
     const enhancedBooks = await Promise.all(
       books.map(async (book: BookInfo) => {
         log(`Enhancing data for book: "${book.title}" by ${book.author}`, 'books');
         
-        // Check our cache first - but ONLY use OpenAI-sourced data
+        // Check our cache first - but ONLY use Gemini-sourced data
         const cachedBook = await storage.findBookInCache(book.title, book.author);
         
-        if (cachedBook && cachedBook.source === 'openai') {
-          // Use cached OpenAI data
+        if (cachedBook && cachedBook.source === 'gemini') {
+          // Use cached Gemini data
           if (cachedBook.summary) {
             book.summary = cachedBook.summary;
           }
@@ -189,11 +189,11 @@ async function enhanceBookData(books: BookInfo[]): Promise<BookInfo[]> {
             book.coverUrl = cachedBook.coverUrl;
           }
           
-          log(`Enhanced book "${book.title}" with cached OpenAI data`, 'books');
+          log(`Enhanced book "${book.title}" with cached Gemini data`, 'books');
           return book;
         }
         
-        // ALWAYS get rating from OpenAI - never use data from Google Books or other sources
+        // ALWAYS get rating from Gemini - never use data from Google Books or other sources
         try {
           const rating = await bookCacheService.getEnhancedRating(book.title, book.author, book.isbn);
           if (rating) {
@@ -204,17 +204,17 @@ async function enhanceBookData(books: BookInfo[]): Promise<BookInfo[]> {
           log(`Failed to get enhanced rating for "${book.title}": ${error instanceof Error ? error.message : String(error)}`, 'books');
         }
         
-        // ALWAYS get summary from OpenAI - never use data from Google Books or other sources
+        // ALWAYS get summary from Gemini - never use data from Google Books or other sources
         try {
           // Always discard any existing summary that might have come from Google Books
-          // This ensures we're only using fresh OpenAI-generated descriptions
+          // This ensures we're only using fresh Gemini-generated descriptions
           book.summary = undefined;
           
-          // Generate a fresh OpenAI description
+          // Generate a fresh Gemini description
           const summary = await bookCacheService.getEnhancedSummary(book.title, book.author);
           if (summary) {
             book.summary = summary;
-            log(`Enhanced summary for "${book.title}" with fresh OpenAI description`, 'books');
+            log(`Enhanced summary for "${book.title}" with fresh Gemini description`, 'books');
           }
         } catch (error) {
           log(`Failed to get enhanced summary for "${book.title}": ${error instanceof Error ? error.message : String(error)}`, 'books');
@@ -236,7 +236,7 @@ async function enhanceBookData(books: BookInfo[]): Promise<BookInfo[]> {
             coverUrl: book.coverUrl,
             rating: book.rating,
             summary: book.summary,
-            source: 'openai', // Explicitly mark as OpenAI source
+            source: 'gemini', // Explicitly mark as Gemini source
             bookId: uniqueId, // Add the required bookId field
             metadata: {
               publisher: book.publisher,

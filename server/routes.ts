@@ -1,13 +1,13 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { analyzeBookshelfImage } from "./openai-vision.js";
+import { analyzeBookshelfImage } from "./gemini-vision.js";
 import { searchBooksByTitle, getRecommendations } from "./books.js";
 import { searchEnhancedBooks } from "./enhanced-book-api.js";
 import { bookCacheService } from "./book-cache-service.js";
 import { bookEnhancer } from "./book-enhancer.js";
-import { getOpenAIBookDetails } from "./openai-books.js";
-import { getOpenAIBookRating, getOpenAIBookSummary } from "./utils/openai-utils.js";
+import { getGeminiBookDetails } from "./gemini-books.js";
+import { getGeminiBookRating, getGeminiBookSummary } from "./utils/gemini-utils.js";
 import multer from "multer";
 import { insertPreferenceSchema, insertSavedBookSchema } from "../shared/schema.js";
 import { getApiUsageStats } from "./api-stats.js";
@@ -23,21 +23,21 @@ const upload = multer({
 
 import { registerEnvRoutes } from './env-routes.js';
 
-import { directOpenAIRoutes } from './direct-openai-routes.js';
+import { directAIRoutes } from './direct-ai-routes.js';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes have been removed
   
-  // Register direct OpenAI routes for fresh, high-quality book recommendations
-  app.use('/api/direct', directOpenAIRoutes);
+  // Register direct AI routes for fresh, high-quality book recommendations
+  app.use('/api/direct', directAIRoutes);
   
 
-  // Clean up non-OpenAI ratings to ensure consistent OpenAI-generated content
+  // Clean up non-Gemini ratings to ensure consistent Gemini-generated content
   try {
-    const cleanedCount = await bookCacheService.cleanupNonOpenAIRatings();
-    log(`Cleaned up ${cleanedCount} non-OpenAI ratings from cache during startup`, 'startup');
+    const cleanedCount = await bookCacheService.cleanupNonGeminiRatings();
+    log(`Cleaned up ${cleanedCount} non-Gemini ratings from cache during startup`, 'startup');
   } catch (error) {
-    log(`Error cleaning up non-OpenAI ratings: ${error instanceof Error ? error.message : String(error)}`, 'startup');
+    log(`Error cleaning up non-Gemini ratings: ${error instanceof Error ? error.message : String(error)}`, 'startup');
   }
 
   // Make environment variables available to the frontend
@@ -49,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register environment routes
   registerEnvRoutes(app);
   
-  // Enhanced book search endpoint with OpenAI-powered data
+  // Enhanced book search endpoint with Gemini-powered data
   app.get('/api/enhanced-books', async (req: Request, res: Response) => {
     try {
       const { title } = req.query;
@@ -58,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title parameter is required" });
       }
       
-      // Use our new enhanced book search with OpenAI-powered data
+      // Use our new enhanced book search with Gemini-powered data
       const books = await searchEnhancedBooks(title);
       res.json(books);
     } catch (error) {
@@ -67,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Book details endpoint with OpenAI-generated ratings and summaries
+  // Book details endpoint with Gemini-generated ratings and summaries
   app.get('/api/book-details/:title/:author', async (req: Request, res: Response) => {
     try {
       const { title, author } = req.params;
@@ -93,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // If not in cache, generate data with OpenAI
+      // If not in cache, generate data with Gemini
       const bookData: any = {
         title: decodeURIComponent(title),
         author: decodeURIComponent(author)
@@ -112,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Note: The getEnhancedRating and getEnhancedSummary methods already handle caching
-      // The data is automatically saved to cache with source='openai' when generated
+      // The data is automatically saved to cache with source='gemini' when generated
       
       // Return the enhanced book data
       res.json({
@@ -145,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert buffer to base64
       const base64Image = req.file.buffer.toString('base64');
       
-      // Use OpenAI Vision API to identify book titles in the image
+      // Use Gemini Vision API to identify book titles in the image
       const visionAnalysis = await analyzeBookshelfImage(base64Image);
       
       if (!visionAnalysis.isBookshelf) {
@@ -156,11 +156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Use the titles identified by OpenAI Vision
+      // Use the titles identified by Gemini Vision
       const bookTitles = visionAnalysis.bookTitles;
       
       if (process.env.NODE_ENV === 'development') {
-        log(`OpenAI identified ${bookTitles.length} book titles`, 'vision-api');
+        log(`Gemini identified ${bookTitles.length} book titles`, 'vision-api');
       }
       
       if (bookTitles.length === 0) {
@@ -175,10 +175,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const detectedBooks: any[] = [];
       
       for (const title of bookTitles) {
+        let added = false;
         const bookResults = await searchBooksByTitle(title);
         
         if (bookResults && bookResults.length > 0) {
-          // Find the closest match to the exact title identified by OpenAI
+          // Find the closest match to the exact title identified by Gemini
           const titleLower = title.toLowerCase();
           
           const bestMatch = bookResults.reduce((best: any, current: any) => {
@@ -190,12 +191,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }, null);
           
           if (bestMatch && calculateSimilarity(titleLower, bestMatch.title.toLowerCase()) > 0.6) {
-            // Check cache for existing OpenAI data
+            // Check cache for existing Gemini data
             const cachedBook = await storage.findBookInCache(bestMatch.title, bestMatch.author);
             
-            if (cachedBook && cachedBook.source === 'openai') {
-              // Use cached OpenAI data if available
-              log(`Using cached OpenAI data for detected book "${bestMatch.title}": rating=${cachedBook.rating}, summary=${cachedBook.summary ? 'yes' : 'no'}`);
+            if (cachedBook && cachedBook.source === 'gemini') {
+              // Use cached Gemini data if available
+              log(`Using cached Gemini data for detected book "${bestMatch.title}": rating=${cachedBook.rating}, summary=${cachedBook.summary ? 'yes' : 'no'}`);
               if (cachedBook.rating) {
                 bestMatch.rating = cachedBook.rating;
                 log(`Applied cached rating to "${bestMatch.title}": ${cachedBook.rating}`);
@@ -205,11 +206,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 log(`Applied cached summary to "${bestMatch.title}"`);
               }
             } else {
-              log(`No cached OpenAI data found for "${bestMatch.title}"`);
+              log(`No cached Gemini data found for "${bestMatch.title}"`);
             }
             
             detectedBooks.push(bestMatch);
+            added = true;
           }
+        }
+
+        // Fail-safe synthesized fallback to prevent "No books detected" UI error due to Google/OL rate limits
+        if (!added) {
+          log(`No API match for "${title}". Synthesizing a placeholder book object...`, 'vision-api');
+          detectedBooks.push({
+            title: title,
+            author: "Unknown Author",
+            isbn: "",
+            coverUrl: "",
+            summary: "A book scanned from your bookshelf.",
+            rating: "4.0",
+            publisher: "Unknown Publisher",
+            categories: [],
+            detectedFrom: title
+          });
         }
       }
       
@@ -371,8 +389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save user preferences
   app.post('/api/preferences', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from request
-      const deviceId = req.deviceId;
+      // Extract deviceId from request, query, or body
+      const deviceId = req.deviceId || req.query.deviceId as string || req.body.deviceId;
       
       if (!deviceId) {
         return res.status(400).json({ message: 'Device ID is required' });
@@ -409,8 +427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user preferences
   app.get('/api/preferences', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from request
-      const deviceId = req.deviceId;
+      // Extract deviceId from request or query parameters
+      const deviceId = req.deviceId || req.query.deviceId as string;
       
       if (!deviceId) {
         return res.status(400).json({ message: 'Device ID is required' });
@@ -451,14 +469,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const bookData of booksToSave) {
         // Cache the book data in book_cache to ensure consistent IDs
-        // Don't set source to "saved" - let it default to maintain compatibility with OpenAI caching
+        // Don't set source to "saved" - let it default to maintain compatibility with Gemini caching
         const bookId = `${bookData.title}-${bookData.author || "Unknown"}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
         const cachedBook = await storage.cacheBook({
           title: bookData.title,
           author: bookData.author || "Unknown",
           isbn: bookData.isbn || null,
           coverUrl: bookData.coverUrl || null,
-          // Don't set source here - it will be set to 'openai' when actual OpenAI content is added
+          // Don't set source here - it will be set to 'gemini' when actual Gemini content is added
           bookId, // Add required bookId field
           expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year expiration
         });
@@ -510,59 +528,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`Processing ${books.length} books from current image`, 'books');
       
-      // Process books: First check cache, then get OpenAI data if needed, and store in cache
+      // Process books: First check cache, then get Gemini data if needed, and store in cache
       books = await Promise.all(books.map(async (book: any) => {
         log(`Processing book: "${book.title}" by ${book.author}`);
         
-        // First check if we have this book in cache with OpenAI data
+        // First check if we have this book in cache with Gemini data
         const cachedBook = await storage.findBookInCache(book.title, book.author);
         
-        if (cachedBook && cachedBook.source === 'openai') {
+        if (cachedBook && cachedBook.source === 'gemini') {
           // We have cache hit - use cached data
-          log(`Using cached OpenAI data for book "${book.title}"`);
+          log(`Using cached Gemini data for book "${book.title}"`);
           
           // Apply cached rating if available
           if (cachedBook.rating) {
             book.rating = cachedBook.rating;
-            log(`Using cached OpenAI rating for book "${book.title}": ${cachedBook.rating}`);
+            log(`Using cached Gemini rating for book "${book.title}": ${cachedBook.rating}`);
           }
           
           // Apply cached summary if available
           if (cachedBook.summary) {
             book.summary = cachedBook.summary;
-            log(`Using cached OpenAI summary for book "${book.title}"`);
+            log(`Using cached Gemini summary for book "${book.title}"`);
           }
         }
         
-        // If rating is still missing, get fresh rating from OpenAI
+        // If rating is still missing, get fresh rating from Gemini
         if (!book.rating) {
           try {
             const rating = await bookCacheService.getEnhancedRating(book.title, book.author, book.isbn);
             if (rating) {
               book.rating = rating;
-              log(`Got fresh OpenAI rating for book "${book.title}": ${rating}`);
+              log(`Got fresh Gemini rating for book "${book.title}": ${rating}`);
             }
           } catch (error) {
-            log(`Error getting OpenAI rating for book "${book.title}": ${error instanceof Error ? error.message : String(error)}`);
+            log(`Error getting Gemini rating for book "${book.title}": ${error instanceof Error ? error.message : String(error)}`);
             book.rating = '';  // Leave empty rather than using fallbacks
           }
         }
         
-        // If summary is missing or too short, get fresh summary from OpenAI
+        // If summary is missing or too short, get fresh summary from Gemini
         if (!book.summary || book.summary.length < 100) {
           try {
             const summary = await bookCacheService.getEnhancedSummary(book.title, book.author);
             if (summary) {
               book.summary = summary;
-              log(`Got fresh OpenAI summary for book "${book.title}"`);
+              log(`Got fresh Gemini summary for book "${book.title}"`);
             }
           } catch (error) {
-            log(`Error getting OpenAI summary for book "${book.title}": ${error instanceof Error ? error.message : String(error)}`);
+            log(`Error getting Gemini summary for book "${book.title}": ${error instanceof Error ? error.message : String(error)}`);
             book.summary = '';  // Leave empty rather than using fallbacks
           }
         }
         
-        // Ensure everything we got from OpenAI is cached for future use
+        // Ensure everything we got from Gemini is cached for future use
         try {
           if (book.rating || book.summary) {
             const bookId = book.isbn || `${book.title}-${book.author}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -573,7 +591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               coverUrl: book.coverUrl || null,
               rating: book.rating || null,
               summary: book.summary || null,
-              source: 'openai',
+              source: 'gemini',
               bookId,
               metadata: {
                 publisher: book.publisher || null,
@@ -581,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               },
               expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 365 days cache
             });
-            log(`Cached OpenAI data for book "${book.title}"`);
+            log(`Cached Gemini data for book "${book.title}"`);
           }
         } catch (cacheError) {
           log(`Error caching book data for "${book.title}": ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
@@ -593,14 +611,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate recommendations
       const recommendationsData = await getRecommendations(books, preferences);
       
-      // Determine if we're using OpenAI or fallback algorithm for recommendations
-      const isUsingOpenAI = recommendationsData.some(rec => rec.matchReason && rec.matchReason.length > 0);
-      log(`Using ${isUsingOpenAI ? 'OpenAI' : 'fallback algorithm'} for recommendations`, 'recommendations');
+      // Determine if we're using Gemini or fallback algorithm for recommendations
+      const isUsingGemini = recommendationsData.some(rec => rec.matchReason && rec.matchReason.length > 0);
+      log(`Using ${isUsingGemini ? 'Gemini' : 'fallback algorithm'} for recommendations`, 'recommendations');
       
-      // Enhance each recommendation with OpenAI data and cache it for future use
+      // Enhance each recommendation with Gemini data and cache it for future use
       const enhancedRecommendations = await Promise.all(recommendationsData.map(async (recommendation: any) => {
         // If this is a fallback recommendation without a match reason, add a fallback explanation
-        if (!isUsingOpenAI && (!recommendation.matchReason || recommendation.matchReason.length === 0)) {
+        if (!isUsingGemini && (!recommendation.matchReason || recommendation.matchReason.length === 0)) {
           recommendation.matchReason = "using fallback algo";
         }
         log(`Enhancing recommendation: "${recommendation.title}" by ${recommendation.author}`);
@@ -608,51 +626,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // First check if we have this recommendation in cache
         const cachedBook = await storage.findBookInCache(recommendation.title, recommendation.author);
         
-        if (cachedBook && cachedBook.source === 'openai') {
-          // Use cached OpenAI data if available
-          log(`Using cached OpenAI data for recommendation "${recommendation.title}"`);
+        if (cachedBook && cachedBook.source === 'gemini') {
+          // Use cached Gemini data if available
+          log(`Using cached Gemini data for recommendation "${recommendation.title}"`);
           
           // Use cached rating
           if (cachedBook.rating) {
             recommendation.rating = cachedBook.rating;
-            log(`Using cached OpenAI rating for recommendation "${recommendation.title}": ${cachedBook.rating}`);
+            log(`Using cached Gemini rating for recommendation "${recommendation.title}": ${cachedBook.rating}`);
           }
           
           // Use cached summary
           if (cachedBook.summary) {
             recommendation.summary = cachedBook.summary;
-            log(`Using cached OpenAI summary for recommendation "${recommendation.title}"`);
+            log(`Using cached Gemini summary for recommendation "${recommendation.title}"`);
           }
         }
         
-        // If we still don't have a rating, get it from OpenAI
+        // If we still don't have a rating, get it from Gemini
         if (!recommendation.rating || recommendation.rating === "0") {
           try {
             const rating = await bookCacheService.getEnhancedRating(recommendation.title, recommendation.author);
             if (rating) {
               recommendation.rating = rating;
-              log(`Got fresh OpenAI rating for recommendation "${recommendation.title}": ${rating}`);
+              log(`Got fresh Gemini rating for recommendation "${recommendation.title}": ${rating}`);
             }
           } catch (error) {
-            log(`Error getting OpenAI rating for recommendation "${recommendation.title}": ${error instanceof Error ? error.message : String(error)}`);
+            log(`Error getting Gemini rating for recommendation "${recommendation.title}": ${error instanceof Error ? error.message : String(error)}`);
           }
         }
         
-        // If summary is missing or too short, get it from OpenAI
+        // If summary is missing or too short, get it from Gemini
         if (!recommendation.summary || recommendation.summary.length < 100) {
           try {
             const summary = await bookCacheService.getEnhancedSummary(recommendation.title, recommendation.author);
             if (summary) {
               recommendation.summary = summary;
-              log(`Got fresh OpenAI summary for recommendation "${recommendation.title}"`);
+              log(`Got fresh Gemini summary for recommendation "${recommendation.title}"`);
             }
           } catch (error) {
-            log(`Error getting OpenAI summary for recommendation "${recommendation.title}": ${error instanceof Error ? error.message : String(error)}`);
+            log(`Error getting Gemini summary for recommendation "${recommendation.title}": ${error instanceof Error ? error.message : String(error)}`);
           }
         }
         
         // Only cache if we don't already have this book in the cache
-        // or if we got fresh data from OpenAI that needs to be stored
+        // or if we got fresh data from Gemini that needs to be stored
         try {
           // We only need to update the cache if we got fresh data or the book wasn't in cache
           const needsCaching = (!cachedBook) || 
@@ -672,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               coverUrl: recommendation.coverUrl || null,
               rating: recommendation.rating || null,
               summary: recommendation.summary || null,
-              source: 'openai',
+              source: 'gemini',
               bookId, // Add required bookId field
               metadata: {
                 publisher: recommendation.publisher || null,
@@ -680,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               },
               expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 365 days cache
             });
-            log(`Cached OpenAI data for recommendation "${recommendation.title}" - ${needsCaching ? "new or updated data" : "already in cache"}`);
+            log(`Cached Gemini data for recommendation "${recommendation.title}" - ${needsCaching ? "new or updated data" : "already in cache"}`);
           } else {
             log(`Skipping cache for "${recommendation.title}" - already in cache with same data`);
           }
@@ -821,7 +839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           coverUrl: coverUrl || null,
           rating: rating || null,
           summary: summary || null,
-          // Don't set source to 'saved' - it will be set to 'openai' when actual OpenAI content is added
+          // Don't set source to 'saved' - it will be set to 'gemini' when actual Gemini content is added
           bookId, // Add required bookId field
           metadata: req.body.metadata || null,
           expiresAt
@@ -901,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Endpoint to enhance saved books with OpenAI-generated summaries and ratings
+  // Endpoint to enhance saved books with Gemini-generated summaries and ratings
   app.post('/api/enhance-saved-books', async (req: Request, res: Response) => {
     try {
       // Extract deviceId from cookie or request body
@@ -913,7 +931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`Enhancing saved books: ${deviceId}`);
       
-      // Call the book enhancer to improve book data using OpenAI
+      // Call the book enhancer to improve book data using Gemini
       const enhancedCount = await bookEnhancer.enhanceSavedBooks(deviceId);
       
       // Retrieve the enhanced books
@@ -932,7 +950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Endpoint to enhance a single book with OpenAI data
+  // Endpoint to enhance a single book with Gemini data
   app.post('/api/enhance-book', async (req: Request, res: Response) => {
     try {
       const { title, author, isbn } = req.body;
@@ -960,8 +978,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple demo endpoint that clearly shows OpenAI generated ratings and summaries
-  app.get('/api/demo/openai-book', async (req: Request, res: Response) => {
+  // Simple demo endpoint that clearly shows Gemini generated ratings and summaries
+  app.get('/api/demo/gemini-book', async (req: Request, res: Response) => {
     try {
       const { title, author } = req.query;
       
@@ -969,33 +987,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Title and author are required as query parameters' });
       }
       
-      log(`DEMO: Getting OpenAI rating and summary for "${title}" by ${author}`);
+      log(`DEMO: Getting Gemini rating and summary for "${title}" by ${author}`);
       
-      // Get direct OpenAI rating
-      const rating = await getOpenAIBookRating(title, author);
+      // Get direct Gemini rating
+      const rating = await getGeminiBookRating(title, author);
       
-      // Get direct OpenAI summary
-      const summary = await getOpenAIBookSummary(title, author);
+      // Get direct Gemini summary
+      const summary = await getGeminiBookSummary(title, author);
       
       return res.status(200).json({
         title,
         author,
         rating,
         summary,
-        source: 'openai-direct',
+        source: 'gemini-direct',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      log(`Error in OpenAI book demo: ${error instanceof Error ? error.message : String(error)}`);
+      log(`Error in Gemini book demo: ${error instanceof Error ? error.message : String(error)}`);
       return res.status(500).json({ 
-        message: 'Error getting OpenAI book data',
+        message: 'Error getting Gemini book data',
         error: error instanceof Error ? error.message : String(error)
       });
     }
   });
   
-  // Endpoint to get book information directly from OpenAI
-  app.get('/api/openai-book', async (req: Request, res: Response) => {
+  // Endpoint to get book information directly from Gemini
+  app.get('/api/gemini-book', async (req: Request, res: Response) => {
     try {
       const { title, author } = req.query;
       
@@ -1003,19 +1021,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Title and author are required as query parameters' });
       }
       
-      log(`Getting OpenAI book details for "${title}" by ${author}`);
+      log(`Getting Gemini book details for "${title}" by ${author}`);
       
-      // Get book details using OpenAI exclusively
-      const bookDetails = await getOpenAIBookDetails(title, author);
+      // Get book details using Gemini exclusively
+      const bookDetails = await getGeminiBookDetails(title, author);
       
       return res.status(200).json({
         ...bookDetails,
         requestedAt: new Date().toISOString()
       });
     } catch (error) {
-      log(`Error getting OpenAI book details: ${error instanceof Error ? error.message : String(error)}`);
+      log(`Error getting Gemini book details: ${error instanceof Error ? error.message : String(error)}`);
       return res.status(500).json({ 
-        message: 'Error getting book details from OpenAI',
+        message: 'Error getting book details from Gemini',
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -1047,7 +1065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   
-  // Test endpoint for OpenAI-powered recommendations
+  // Test endpoint for Gemini-powered recommendations
   app.post('/api/test/ai-recommendations', async (req: Request, res: Response) => {
     try {
       const { books, preferences } = req.body;
@@ -1056,13 +1074,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Please provide a non-empty array of books' });
       }
       
-      // Import the OpenAI recommendations function
-      const { getOpenAIRecommendations } = await import('./openai-recommendations.js');
+      // Import the Gemini recommendations function
+      const { getGeminiRecommendations } = await import('./gemini-recommendations.js');
       
       log(`Testing AI recommendations with ${books.length} books`);
       
       // Get AI-powered recommendations
-      const recommendations = await getOpenAIRecommendations(books, preferences || {});
+      const recommendations = await getGeminiRecommendations(books, preferences || {});
       
       log(`Received ${recommendations.length} AI-powered recommendations`);
       

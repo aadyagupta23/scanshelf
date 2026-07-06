@@ -35,10 +35,20 @@ type Preference = {
 
 export default function Books() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [userPreferences, setUserPreferences] = useState<Preference>({
-    genres: [],
-    authors: [],
-    goodreadsData: null
+  const [userPreferences, setUserPreferences] = useState<Preference>(() => {
+    try {
+      const saved = localStorage.getItem("scanshelf_preferences");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to parse preferences from localStorage", e);
+    }
+    return {
+      genres: [],
+      authors: [],
+      goodreadsData: null
+    };
   });
   const [detectedBooks, setDetectedBooks] = useState<Book[]>([]);
   const [currentRecommendations, setCurrentRecommendations] = useState<Recommendation[]>([]);
@@ -78,11 +88,13 @@ export default function Books() {
   useEffect(() => {
     if (existingPreferences?.preferences) {
       console.log('Setting user preferences from API:', existingPreferences.preferences);
-      setUserPreferences({
+      const prefs = {
         genres: existingPreferences.preferences.genres || [],
         authors: existingPreferences.preferences.authors || [],
         goodreadsData: existingPreferences.preferences.goodreadsData || null
-      });
+      };
+      setUserPreferences(prefs);
+      localStorage.setItem("scanshelf_preferences", JSON.stringify(prefs));
     }
   }, [existingPreferences]);
 
@@ -131,7 +143,7 @@ export default function Books() {
     }
   });
 
-  // Generate recommendations using direct OpenAI integration for high-quality descriptions
+  // Generate recommendations using direct Gemini integration for high-quality descriptions
   const recommendationsMutation = useMutation({
     mutationFn: async () => {
       if (!detectedBooks || detectedBooks.length === 0) {
@@ -144,7 +156,7 @@ export default function Books() {
       // This includes genres, authors, and goodreadsData that were collected in the preferences step
       
       // Include the detected books and preferences in the request
-      console.log("Sending books for OpenAI recommendations:", detectedBooks.length);
+      console.log("Sending books for Gemini recommendations:", detectedBooks.length);
       const response = await apiRequest('POST', '/api/direct/recommendations', {
         books: detectedBooks,
         preferences: userPreferences
@@ -183,7 +195,13 @@ export default function Books() {
 
   const handlePreferencesSubmit = (preferences: Preference) => {
     setUserPreferences(preferences);
+    localStorage.setItem("scanshelf_preferences", JSON.stringify(preferences));
     savePreferencesMutation.mutate(preferences);
+  };
+
+  const handleReset = () => {
+    setDetectedBooks([]);
+    setCurrentRecommendations([]);
   };
 
   const handleBooksDetected = (books: Book[], _imageBase64: string) => {
@@ -235,12 +253,12 @@ export default function Books() {
             <div className="flex justify-between items-center relative">
               {/* Progress Bar Line */}
               <div className="absolute top-1/2 transform -translate-y-1/2 h-0.5 bg-gray-200 dark:bg-gray-700 w-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 h-0.5 bg-violet-600 dark:bg-violet-500" style={{ width: `${((currentStep - 1) / 2) * 100}%` }}></div>
+              <div className="absolute top-1/2 transform -translate-y-1/2 h-0.5 bg-primary" style={{ width: `${((currentStep - 1) / 2) * 100}%` }}></div>
 
               {/* Steps */}
               <div className={`relative flex items-center justify-center w-10 h-10 rounded-full z-10 cursor-pointer transition-colors ${
                 currentStep >= 1 
-                  ? 'bg-violet-600 dark:bg-violet-500 text-white' 
+                  ? 'bg-primary text-primary-foreground' 
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
               }`}
               onClick={() => setCurrentStep(1)}
@@ -249,7 +267,7 @@ export default function Books() {
               </div>
               <div className={`relative flex items-center justify-center w-10 h-10 rounded-full z-10 cursor-pointer transition-colors ${
                 currentStep >= 2 
-                  ? 'bg-violet-600 dark:bg-violet-500 text-white' 
+                  ? 'bg-primary text-primary-foreground' 
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
               }`}
               onClick={() => currentStep >= 2 ? setCurrentStep(2) : null}
@@ -258,7 +276,7 @@ export default function Books() {
               </div>
               <div className={`relative flex items-center justify-center w-10 h-10 rounded-full z-10 cursor-pointer transition-colors ${
                 currentStep >= 3 
-                  ? 'bg-violet-600 dark:bg-violet-500 text-white' 
+                  ? 'bg-primary text-primary-foreground' 
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
               }`}
               onClick={() => currentStep >= 3 ? setCurrentStep(3) : null}
@@ -291,6 +309,7 @@ export default function Books() {
               <UploadStep
                 onBooksDetected={handleBooksDetected}
                 detectedBooks={detectedBooks}
+                onReset={handleReset}
                 onGetRecommendations={() => {
                   if (detectedBooks.length > 0) {
                     recommendationsMutation.mutate();

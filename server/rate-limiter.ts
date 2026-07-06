@@ -63,7 +63,7 @@ async function getKV(): Promise<KVStore> {
  */
 export class VercelKVRateLimiter {
   private readonly limits = {
-    'openai': { perMinute: 60, perDay: 12000 }, // Reduced daily limit for better cost control (~$120-360/day max)
+    'gemini': { perMinute: 60, perDay: 12000 }, // Reduced daily limit for better cost control (~$120-360/day max)
     'google-books': { perMinute: 100, perDay: 5000 }, // More realistic for free tier usage
     'google-vision': { perMinute: 100, perDay: 5000 }, // Much more generous - Google Vision can handle this easily
     'open-library': { perMinute: 60, perDay: 2000 } // Slightly increased daily limit while respecting free service

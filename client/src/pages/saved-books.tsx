@@ -5,8 +5,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import StarRating from "@/components/ui/star-rating";
-import AffiliateDisclosure from "@/components/ui/affiliate-disclosure";
-
 interface SavedBook {
   id: number;
   title: string;
@@ -108,8 +106,7 @@ export default function SavedBooks() {
           </Link>
         </div>
 
-        {/* Affiliate Disclosure - only show when books are present */}
-        {!isLoading && savedBooks.length > 0 && <AffiliateDisclosure />}
+
 
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-md mb-6" role="alert">
@@ -147,7 +144,7 @@ export default function SavedBooks() {
             <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Your reading list is empty</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">Save books to read later by clicking "Save for Later" on any book recommendation.</p>
             <Link href="/books">
-              <Button className="bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500 text-white">Scan Books Now</Button>
+              <Button>Scan Books Now</Button>
             </Link>
           </div>
         ) : (
@@ -214,7 +211,7 @@ export default function SavedBooks() {
                     {book.summary && book.summary.length > 240 && (
                       <button 
                         onClick={() => toggleExpand(book.id)}
-                        className="mt-2 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-sm flex items-center font-medium"
+                        className="mt-2 text-primary hover:text-primary/80 text-sm flex items-center font-medium"
                       >
                         {expandedBooks.includes(book.id) ? (
                           <>

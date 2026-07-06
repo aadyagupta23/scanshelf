@@ -4,7 +4,7 @@
 
 /**
  * Get a descriptive match quality label based on the match score
- * @param matchScore Numeric score from OpenAI recommendations (0-100)
+ * @param matchScore Numeric score from Gemini recommendations (0-100)
  * @returns User-friendly match quality label or empty string if below threshold
  */
 export function getMatchQualityLabel(matchScore: number | undefined): string {
@@ -19,7 +19,7 @@ export function getMatchQualityLabel(matchScore: number | undefined): string {
 
 /**
  * Get CSS class for match quality badge
- * @param matchScore Numeric score from OpenAI recommendations (0-100)
+ * @param matchScore Numeric score from Gemini recommendations (0-100)
  * @returns CSS class for styling the match quality badge or empty string if below threshold
  */
 export function getMatchQualityClass(matchScore: number | undefined): string {

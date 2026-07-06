@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 interface ApiMonitoring {
-  openai: {
+  gemini: {
     configured: boolean;
     status: string;
     failureCount: number;
@@ -151,27 +151,27 @@ export default function AdminStatsPage() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* OpenAI API Status Card */}
+        {/* Gemini API Status Card */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <Server className="h-5 w-5" />
-              OpenAI API Status
+              Gemini API Status
             </CardTitle>
             <CardDescription>
-              Current status and monitoring for OpenAI API
+              Current status and monitoring for Gemini API
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {apiStats?.apiMonitoring?.openai && (
+            {apiStats?.apiMonitoring?.gemini && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Status:</span>
                   <Badge 
-                    variant={apiStats.apiMonitoring.openai.configured ? "outline" : "destructive"}
-                    className={apiStats.apiMonitoring.openai.configured ? "bg-green-100 text-green-800" : ""}
+                    variant={apiStats.apiMonitoring.gemini.configured ? "outline" : "destructive"}
+                    className={apiStats.apiMonitoring.gemini.configured ? "bg-green-100 text-green-800" : ""}
                   >
-                    {apiStats.apiMonitoring.openai.configured ? "Available" : "Not Configured"}
+                    {apiStats.apiMonitoring.gemini.configured ? "Available" : "Not Configured"}
                   </Badge>
                 </div>
                 
@@ -179,12 +179,12 @@ export default function AdminStatsPage() {
                   <div className="flex justify-between items-center">
                     <span>Daily Usage:</span>
                     <span className="font-medium">
-                      {apiStats.apiMonitoring.openai.usageToday} / {apiStats.apiMonitoring.openai.dailyLimit}
+                      {apiStats.apiMonitoring.gemini.usageToday} / {apiStats.apiMonitoring.gemini.dailyLimit}
                     </span>
                   </div>
                   <Progress 
-                    value={apiStats.apiMonitoring.openai.dailyLimit 
-                      ? (apiStats.apiMonitoring.openai.usageToday / apiStats.apiMonitoring.openai.dailyLimit) * 100 
+                    value={apiStats.apiMonitoring.gemini.dailyLimit 
+                      ? (apiStats.apiMonitoring.gemini.usageToday / apiStats.apiMonitoring.gemini.dailyLimit) * 100 
                       : 0} 
                     className="h-2" 
                   />
@@ -195,17 +195,17 @@ export default function AdminStatsPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Failure Count:</span>
-                      <Badge variant={apiStats.apiMonitoring.openai.failureCount > 0 ? "destructive" : "outline"}>
-                        {apiStats.apiMonitoring.openai.failureCount}
+                      <Badge variant={apiStats.apiMonitoring.gemini.failureCount > 0 ? "destructive" : "outline"}>
+                        {apiStats.apiMonitoring.gemini.failureCount}
                       </Badge>
                     </div>
                     
                     <div className="flex justify-between">
                       <span>Affected Users:</span>
-                      <span>{apiStats.apiMonitoring.openai.affectedUsers}</span>
+                      <span>{apiStats.apiMonitoring.gemini.affectedUsers}</span>
                     </div>
                     
-                    {apiStats.apiMonitoring.openai.isCritical && (
+                    {apiStats.apiMonitoring.gemini.isCritical && (
                       <Alert variant="destructive" className="mt-2">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertTitle>Critical Issue Detected</AlertTitle>
@@ -215,10 +215,10 @@ export default function AdminStatsPage() {
                       </Alert>
                     )}
                     
-                    {apiStats.apiMonitoring.openai.lastFailure && (
+                    {apiStats.apiMonitoring.gemini.lastFailure && (
                       <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Last failure:</span>
-                        <span>{new Date(apiStats.apiMonitoring.openai.lastFailure).toLocaleString()}</span>
+                        <span>{new Date(apiStats.apiMonitoring.gemini.lastFailure).toLocaleString()}</span>
                       </div>
                     )}
                   </div>

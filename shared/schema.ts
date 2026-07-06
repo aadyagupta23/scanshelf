@@ -95,7 +95,7 @@ export const bookCache = createTable("book_cache", {
   coverUrl: text("cover_url"),
   rating: varchar("rating", { length: 10 }),
   summary: text("summary"),
-  source: varchar("source", { length: 20 }).notNull(), // 'google', 'amazon', 'openai'
+  source: varchar("source", { length: 20 }).notNull(), // 'google', 'amazon', 'gemini', 'groq'
   metadata: jsonb("metadata"),
   cachedAt: timestamp("cached_at").defaultNow(),
   expiresAt: timestamp("expires_at"), // Cache expiration time
