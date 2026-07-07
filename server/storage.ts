@@ -2,7 +2,8 @@ import {
   users, type User, type InsertUser,
   preferences, type Preference, type InsertPreference,
   savedBooks, type SavedBook, type InsertSavedBook,
-  bookCache, type BookCache, type InsertBookCache
+  bookCache, type BookCache, type InsertBookCache,
+  scanSessions, type ScanSession, type InsertScanSession
 } from "../shared/schema.js";
 import { db } from "./db.js";
 import { eq, and, desc, or, sql, gte } from "drizzle-orm";
@@ -39,6 +40,11 @@ export interface IStorage {
   getBookCacheById(id: number): Promise<BookCache | undefined>;
   cacheBook(bookData: InsertBookCache): Promise<BookCache>;
   getRecentlyAddedBooks(limit?: number): Promise<BookCache[]>;
+
+  // Scan Session methods
+  createScanSession(session: InsertScanSession): Promise<ScanSession>;
+  getScanSessionsByDeviceId(deviceId: string): Promise<ScanSession[]>;
+  getScanSessionById(id: number): Promise<ScanSession | undefined>;
 }
 
 // Database storage implementation
@@ -318,6 +324,47 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       log(`Error getting recently added books: ${error instanceof Error ? error.message : String(error)}`, 'cache');
       return [];
+    }
+  }
+
+  // Scan Session methods
+  async createScanSession(insertSession: InsertScanSession): Promise<ScanSession> {
+    try {
+      const [session] = await db
+        .insert(scanSessions)
+        .values(insertSession)
+        .returning();
+      log(`Created scan session ID: ${session.id} for device: ${insertSession.deviceId}`, 'storage');
+      return session;
+    } catch (error) {
+      log(`Error creating scan session: ${error instanceof Error ? error.message : String(error)}`, 'storage');
+      throw error;
+    }
+  }
+
+  async getScanSessionsByDeviceId(deviceId: string): Promise<ScanSession[]> {
+    try {
+      return await db
+        .select()
+        .from(scanSessions)
+        .where(eq(scanSessions.deviceId, deviceId))
+        .orderBy(desc(scanSessions.createdAt));
+    } catch (error) {
+      log(`Error retrieving scan sessions for device ${deviceId}: ${error instanceof Error ? error.message : String(error)}`, 'storage');
+      return [];
+    }
+  }
+
+  async getScanSessionById(id: number): Promise<ScanSession | undefined> {
+    try {
+      const [session] = await db
+        .select()
+        .from(scanSessions)
+        .where(eq(scanSessions.id, id));
+      return session || undefined;
+    } catch (error) {
+      log(`Error retrieving scan session ${id}: ${error instanceof Error ? error.message : String(error)}`, 'storage');
+      return undefined;
     }
   }
 }

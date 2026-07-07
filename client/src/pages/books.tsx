@@ -8,6 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useDevice } from "@/contexts/DeviceContext";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 type Book = {
   id?: number;
@@ -34,6 +35,7 @@ type Preference = {
 };
 
 export default function Books() {
+  const [location] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [userPreferences, setUserPreferences] = useState<Preference>(() => {
     try {
@@ -53,6 +55,38 @@ export default function Books() {
   const [detectedBooks, setDetectedBooks] = useState<Book[]>([]);
   const [currentRecommendations, setCurrentRecommendations] = useState<Recommendation[]>([]);
   const { toast } = useToast();
+
+  // Load session from query param if available
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const sessionId = searchParams.get("sessionId");
+    
+    if (sessionId) {
+      const loadSession = async () => {
+        try {
+          const response = await fetch(`/api/scan-sessions/${sessionId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch scan session: ${response.status}`);
+          }
+          const data = await response.json();
+          if (data && Array.isArray(data.books)) {
+            console.log("Loaded books from session:", data.books);
+            setDetectedBooks(data.books);
+            setCurrentStep(2); // Directly skip to step 2 (results view)
+          }
+        } catch (e) {
+          console.error("Error loading session:", e);
+          toast({
+            title: "Error loading session",
+            description: e instanceof Error ? e.message : "Failed to load past scan session.",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      loadSession();
+    }
+  }, [location]);
 
   // Get device ID from context
   const { deviceId, isLoading: deviceLoading } = useDevice();
@@ -209,6 +243,38 @@ export default function Books() {
     if (books && books.length > 0) {
       setDetectedBooks(books);
       saveBooksMutation.mutate(books);
+      
+      // Save to local scan history for data export
+      try {
+        const existingHistoryJson = localStorage.getItem("scanshelf_scan_history");
+        const existingHistory = existingHistoryJson ? JSON.parse(existingHistoryJson) : [];
+        
+        // Convert new books to history items with timestamp
+        const newHistoryItems = books.map(book => ({
+          title: book.title,
+          author: book.author || "Unknown Author",
+          coverUrl: book.coverUrl || "",
+          scannedAt: new Date().toISOString()
+        }));
+
+        // Combine and filter out exact duplicates (same title & author) to keep it clean, keeping newest first
+        const combined = [...newHistoryItems, ...existingHistory];
+        const uniqueHistory: typeof combined = [];
+        const seen = new Set<string>();
+
+        for (const item of combined) {
+          const key = `${item.title.toLowerCase().trim()}|${item.author.toLowerCase().trim()}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniqueHistory.push(item);
+          }
+        }
+
+        // Limit to 50 items and store
+        localStorage.setItem("scanshelf_scan_history", JSON.stringify(uniqueHistory.slice(0, 50)));
+      } catch (e) {
+        console.error("Failed to save to scanshelf_scan_history", e);
+      }
       
       // No longer automatically process recommendations
       // Let the user review the detected books and click the button manually

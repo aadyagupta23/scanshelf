@@ -327,8 +327,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Sort by match score (highest first)
       rankedBooks.sort((a, b) => b.matchScore - a.matchScore);
+
+      // Cache detected books and record scan session
+      const detectedBookIds: number[] = [];
+      try {
+        for (const book of detectedBooks) {
+          const bookIdStr = book.isbn || `${book.title}-${book.author}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const cachedBook = await storage.cacheBook({
+            title: book.title,
+            author: book.author || "Unknown Author",
+            isbn: book.isbn || null,
+            coverUrl: book.coverUrl || null,
+            rating: book.rating || null,
+            summary: book.summary || null,
+            bookId: bookIdStr,
+            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+          });
+          if (cachedBook && cachedBook.id) {
+            detectedBookIds.push(cachedBook.id);
+            // Assign cache database ID
+            book.id = cachedBook.id;
+          }
+        }
+
+        if (detectedBookIds.length > 0) {
+          await storage.createScanSession({
+            userId: 1,
+            deviceId,
+            imageUrl: null,
+            detectedBookIds
+          });
+          log(`Successfully recorded scan session for device ${deviceId} with ${detectedBookIds.length} books`, 'vision');
+        }
+      } catch (sessionError) {
+        log(`Failed to create scan session: ${sessionError instanceof Error ? sessionError.message : String(sessionError)}`, 'error');
+      }
       
-      // Return the ranked books found in the image
+      // Return the ranked books found in the image (with database IDs mapped)
       return res.status(200).json({
         books: rankedBooks, 
         bookTitles,
@@ -389,8 +424,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save user preferences
   app.post('/api/preferences', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from request, query, or body
-      const deviceId = req.deviceId || req.query.deviceId as string || req.body.deviceId;
+      // Extract deviceId from query, body, or request
+      const deviceId = req.query.deviceId as string || req.body.deviceId || req.deviceId;
       
       if (!deviceId) {
         return res.status(400).json({ message: 'Device ID is required' });
@@ -427,8 +462,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user preferences
   app.get('/api/preferences', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from request or query parameters
-      const deviceId = req.deviceId || req.query.deviceId as string;
+      // Extract deviceId from query or request parameters
+      const deviceId = req.query.deviceId as string || req.deviceId;
       
       if (!deviceId) {
         return res.status(400).json({ message: 'Device ID is required' });
@@ -746,8 +781,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get saved books for a device
   app.get('/api/saved-books', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from request, cookie, or query parameters
-      const deviceId = req.deviceId || req.cookies.deviceId || req.query.deviceId as string || '';
+      // Extract deviceId from query, cookie, or request parameters
+      const deviceId = req.query.deviceId as string || req.deviceId || req.cookies.deviceId || '';
       log(`GetSavedBooks - Retrieved device ID: ${deviceId}`);
       
       // Validate deviceId
@@ -803,8 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save a book
   app.post('/api/saved-books', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from request, cookie, query, or body parameters
-      const deviceId = req.deviceId || req.cookies.deviceId || req.query.deviceId as string || req.body.deviceId || '';
+      // Extract deviceId from query, body, request, or cookie parameters
+      const deviceId = req.query.deviceId as string || req.body.deviceId || req.deviceId || req.cookies.deviceId || '';
       
       // Validate deviceId
       if (!deviceId) {
@@ -945,6 +980,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       log(`Error enhancing saved books: ${error instanceof Error ? error.message : String(error)}`);
       return res.status(500).json({ 
         message: 'Error enhancing saved books',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Get all scan sessions for a device
+  app.get('/api/scan-sessions', async (req: Request, res: Response) => {
+    try {
+      const deviceId = req.deviceId || req.cookies.deviceId || req.query.deviceId as string || '';
+      
+      if (!deviceId) {
+        return res.status(400).json({ message: 'Device ID is required' });
+      }
+      
+      log(`GetScanSessions - Fetching scans for device: ${deviceId}`, 'storage');
+      const sessions = await storage.getScanSessionsByDeviceId(deviceId);
+      
+      const enrichedSessions = await Promise.all(
+        sessions.map(async (session) => {
+          const firstBookId = session.detectedBookIds[0];
+          let firstBook = null;
+          if (firstBookId) {
+            firstBook = await storage.getBookCacheById(firstBookId);
+          }
+          return {
+            id: session.id,
+            deviceId: session.deviceId,
+            createdAt: session.createdAt,
+            booksCount: session.detectedBookIds.length,
+            firstBookCover: firstBook?.coverUrl || "",
+            firstBookTitle: firstBook?.title || "",
+            firstBookAuthor: firstBook?.author || ""
+          };
+        })
+      );
+      
+      return res.status(200).json(enrichedSessions);
+    } catch (error) {
+      log(`Error retrieving scan sessions: ${error instanceof Error ? error.message : String(error)}`, 'error');
+      return res.status(500).json({
+        message: 'Error retrieving scan history',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Get details for a specific scan session
+  app.get('/api/scan-sessions/:id', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid scan session ID' });
+      }
+      
+      const session = await storage.getScanSessionById(id);
+      if (!session) {
+        return res.status(404).json({ message: 'Scan session not found' });
+      }
+      
+      // Fetch full book info for the IDs in this session
+      const books = await Promise.all(
+        session.detectedBookIds.map(async (bookId: number) => {
+          return await storage.getBookCacheById(bookId);
+        })
+      );
+      
+      const validBooks = books.filter((b) => b !== undefined && b !== null);
+      
+      return res.status(200).json({
+        session,
+        books: validBooks
+      });
+    } catch (error) {
+      log(`Error retrieving scan session details: ${error instanceof Error ? error.message : String(error)}`, 'error');
+      return res.status(500).json({
+        message: 'Error retrieving scan session details',
         error: error instanceof Error ? error.message : String(error)
       });
     }

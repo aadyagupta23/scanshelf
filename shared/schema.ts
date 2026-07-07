@@ -152,6 +152,31 @@ export type InsertPreference = z.infer<typeof insertPreferenceSchema>;
 export type SavedBook = typeof savedBooks.$inferSelect;
 export type InsertSavedBook = z.infer<typeof insertSavedBookSchema>;
 
+// Saved scan sessions
+export const scanSessions = createTable("scan_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  deviceId: text("device_id").notNull(),
+  imageUrl: text("image_url"),
+  detectedBookIds: integer("detected_book_ids").array().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertScanSessionSchema = createInsertSchema(scanSessions).pick({
+  userId: true,
+  deviceId: true,
+  imageUrl: true,
+  detectedBookIds: true,
+});
+
+export type ScanSession = typeof scanSessions.$inferSelect;
+export type InsertScanSession = {
+  userId?: number | null;
+  deviceId: string;
+  imageUrl?: string | null;
+  detectedBookIds: number[];
+};
+
 // Recommendation types are now defined as interfaces since we're using ephemeral recommendations
 export interface Recommendation {
   title: string;

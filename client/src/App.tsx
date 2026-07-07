@@ -15,6 +15,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { syncDeviceIdCookie } from "./lib/deviceId";
 import AdminPage from "@/pages/admin";
 import Debug from "@/pages/debug";
+import Settings from "@/pages/settings";
+import HistoryPage from "@/pages/history";
 
 
 function Router() {
@@ -27,6 +29,8 @@ function Router() {
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/debug" component={Debug} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/history" component={HistoryPage} />
         <Route component={NotFound} />
       </Switch>
     </WouterRouter>
