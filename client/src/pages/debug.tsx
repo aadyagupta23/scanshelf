@@ -72,8 +72,7 @@ export default function Debug() {
     if (getResult.status === 404) {
       const testPrefs = {
         genres: ['Fiction', 'Science Fiction'],
-        authors: ['Test Author'],
-        goodreadsData: null
+        authors: ['Test Author']
       };
       
       await testEndpoint('/api/preferences', 'POST', testPrefs, setPreferencesTest);

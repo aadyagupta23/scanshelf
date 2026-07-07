@@ -168,14 +168,6 @@ export default async function handler(req, res) {
               }
             }
           }
-          if (preferences.goodreadsData && Array.isArray(preferences.goodreadsData)) {
-            for (const entry of preferences.goodreadsData) {
-              if (entry['Title'] && entry['Title'].toLowerCase() === book.title.toLowerCase()) {
-                const rating = entry['My Rating'] ? parseInt(entry['My Rating']) : 0;
-                matchScore += rating >= 4 ? 8 : rating;
-              }
-            }
-          }
         }
         return { ...book, matchScore };
       }).sort((a, b) => b.matchScore - a.matchScore);

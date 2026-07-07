@@ -21,8 +21,7 @@ CREATE TABLE "development"."preferences" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"device_id" text NOT NULL,
 	"genres" text[] NOT NULL,
-	"authors" text[],
-	"goodreads_data" jsonb
+	"authors" text[]
 );
 --> statement-breakpoint
 CREATE TABLE "development"."saved_books" (

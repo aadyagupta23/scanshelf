@@ -13,7 +13,7 @@ import { rateLimiter } from './rate-limiter.js';
  */
 export async function getGeminiRecommendations(
   userBooks: Array<{ title: string, author: string }>,
-  preferences: { genres?: string[], authors?: string[], goodreadsData?: any } = {},
+  preferences: { genres?: string[], authors?: string[] } = {},
   _deviceId?: string
 ): Promise<Array<{ 
   title: string, 
@@ -61,52 +61,8 @@ export async function getGeminiRecommendations(
         ? `Authors I like: ${preferences.authors.join(', ')}.` 
         : '';
       
-      // Format any Goodreads data if available
-      let goodreadsInfo = '';
-      if (preferences.goodreadsData) {
-        try {
-          const goodreads = preferences.goodreadsData;
-          const favoriteBooks = goodreads.favoriteBooks 
-            ? `Favorite books from Goodreads: ${goodreads.favoriteBooks.join(', ')}.` 
-            : '';
-          const favoriteGenres = goodreads.favoriteGenres 
-            ? `Favorite genres from Goodreads: ${goodreads.favoriteGenres.join(', ')}.` 
-            : '';
-          const recentlyRead = goodreads.recentlyRead 
-            ? `Recently read books: ${goodreads.recentlyRead.join(', ')}.` 
-            : '';
-            
-          // Extract "Want to Read" books from Goodreads data if available
-          let wantToReadBooks = '';
-          if (preferences.goodreadsData.raw && Array.isArray(preferences.goodreadsData.raw)) {
-            const wantToReadList = preferences.goodreadsData.raw
-              .filter((entry: any) => 
-                entry["Bookshelves"] && 
-                (entry["Bookshelves"].includes("to-read") || 
-                 entry["Bookshelves"].includes("want-to-read") || 
-                 entry["Bookshelves"].includes("want to read")))
-              .map((entry: any) => `${entry["Title"]} by ${entry["Author"]}`)
-              .slice(0, 10);
-              
-            if (wantToReadList.length > 0) {
-              wantToReadBooks = `Books I want to read from Goodreads: ${wantToReadList.join(', ')}.`;
-            }
-          }
-          
-          goodreadsInfo = [favoriteBooks, favoriteGenres, recentlyRead, wantToReadBooks]
-            .filter(text => text.length > 0)
-            .join(' ');
-          
-          if (!goodreadsInfo) {
-            goodreadsInfo = `Additional reading preferences from my Goodreads profile.`;
-          }
-        } catch {
-          goodreadsInfo = `I have additional reading preferences from my Goodreads profile.`;
-        }
-      }
-      
       // Combine all preference information
-      const userPreferencesText = [formattedGenres, formattedAuthors, goodreadsInfo]
+      const userPreferencesText = [formattedGenres, formattedAuthors]
         .filter(text => text.length > 0)
         .join(' ');
       
@@ -123,12 +79,10 @@ CRITICAL INSTRUCTIONS:
 3. Do NOT recommend books that are similar but not on the list
 4. The ONLY valid recommendations are books EXPLICITLY listed in the JSON array I will provide
 5. Recommend at least 3 books. You may recommend more (up to 7) only if they closely align with the user's stated genres, authors, or reading preferences.
-6. Base your selections on how well each book aligns with the user's stated genre preferences, favorite authors, and reading history
-7. If the user has a "Want to Read" list from Goodreads, PRIORITIZE books that are similar to those on their list
-8. For each book, provide a SPECIFIC, CONCISE reason (1-2 sentences) explaining the match
-9. When a book is similar to something on their "Want to Read" list, mention this specific connection in the match reason
-10. Match reasons should ONLY reference preferences the user explicitly mentioned - no assumptions
-11. Higher scoring books should have more specific, compelling match reasons`
+6. Base your selections on how well each book aligns with the user's stated genre preferences and favorite authors
+7. For each book, provide a SPECIFIC, CONCISE reason (1-2 sentences) explaining the match
+8. Match reasons should ONLY reference preferences the user explicitly mentioned - no assumptions
+9. Higher scoring books should have more specific, compelling match reasons`
           },
           {
             role: "user",

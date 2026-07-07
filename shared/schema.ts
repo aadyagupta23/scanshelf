@@ -71,14 +71,12 @@ export const preferences = createTable("preferences", {
   deviceId: text("device_id").notNull(),
   genres: text("genres").array().notNull(),
   authors: text("authors").array(),
-  goodreadsData: jsonb("goodreads_data"),
 });
 
 export const insertPreferenceSchema = createInsertSchema(preferences).pick({
   deviceId: true,
   genres: true,
   authors: true,
-  goodreadsData: true,
 });
 
 // Book cache schema for storing book metadata to reduce external API calls

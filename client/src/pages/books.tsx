@@ -31,7 +31,6 @@ type Recommendation = {
 type Preference = {
   genres: string[];
   authors: string[];
-  goodreadsData?: Record<string, unknown> | unknown[] | null;
 };
 
 export default function Books() {
@@ -48,8 +47,7 @@ export default function Books() {
     }
     return {
       genres: [],
-      authors: [],
-      goodreadsData: null
+      authors: []
     };
   });
   const [detectedBooks, setDetectedBooks] = useState<Book[]>([]);
@@ -124,8 +122,7 @@ export default function Books() {
       console.log('Setting user preferences from API:', existingPreferences.preferences);
       const prefs = {
         genres: existingPreferences.preferences.genres || [],
-        authors: existingPreferences.preferences.authors || [],
-        goodreadsData: existingPreferences.preferences.goodreadsData || null
+        authors: existingPreferences.preferences.authors || []
       };
       setUserPreferences(prefs);
       localStorage.setItem("scanshelf_preferences", JSON.stringify(prefs));
@@ -187,7 +184,7 @@ export default function Books() {
       }
       
       // Use the existing userPreferences from state
-      // This includes genres, authors, and goodreadsData that were collected in the preferences step
+      // This includes genres and authors that were collected in the preferences step
       
       // Include the detected books and preferences in the request
       console.log("Sending books for Gemini recommendations:", booksToRecommend.length);

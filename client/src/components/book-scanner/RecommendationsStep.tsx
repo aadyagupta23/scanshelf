@@ -24,10 +24,9 @@ interface Recommendation {
 interface RecommendationsStepProps {
   recommendations: Recommendation[];
   isLoading?: boolean;
-  goodreadsData?: any[];
 }
 
-export default function RecommendationsStep({ recommendations, isLoading = false, goodreadsData }: RecommendationsStepProps) {
+export default function RecommendationsStep({ recommendations, isLoading = false }: RecommendationsStepProps) {
   const [savingBookIds, setSavingBookIds] = useState<number[]>([]);
   const [savedBookIds, setSavedBookIds] = useState<number[]>([]);
   const [expandedBooks, setExpandedBooks] = useState<number[]>([]);
@@ -190,34 +189,6 @@ export default function RecommendationsStep({ recommendations, isLoading = false
     }
   };
 
-  // Function to check if a book has already been read based on Goodreads data
-  const isBookAlreadyRead = (book: Recommendation): boolean => {
-    if (!goodreadsData || !Array.isArray(goodreadsData) || goodreadsData.length === 0) {
-      return false;
-    }
-    
-    const bookTitle = book.title.toLowerCase().replace(/[^\w\s]/g, '').trim();
-    const bookAuthor = book.author.toLowerCase().replace(/[^\w\s]/g, '').trim();
-    
-    // Check if this book appears in the user's Goodreads history
-    return goodreadsData.some(goodreadsBook => {
-      if (!goodreadsBook["Title"] || !goodreadsBook["Author"]) {return false;}
-      
-      // Only consider books that have been read (have a rating)
-      if (!goodreadsBook["My Rating"] || parseInt(goodreadsBook["My Rating"]) === 0) {return false;}
-      
-      const goodreadsTitle = goodreadsBook["Title"].toLowerCase().replace(/[^\w\s]/g, '').trim();
-      const goodreadsAuthor = goodreadsBook["Author"].toLowerCase().replace(/[^\w\s]/g, '').trim();
-      
-      // Check for partial title match and author match
-      const titleMatch = bookTitle.includes(goodreadsTitle) || goodreadsTitle.includes(bookTitle);
-      const authorMatch = bookAuthor.includes(goodreadsAuthor) || goodreadsAuthor.includes(bookAuthor);
-      
-      // Match on title OR a combination of partial title and author
-      return titleMatch || (bookTitle.length > 3 && goodreadsTitle.includes(bookTitle) && authorMatch);
-    });
-  };
-  
   // Function to render star ratings using our shared StarRating component
   const renderRating = (rating: string) => {
     // Handle potential empty or invalid ratings
@@ -293,309 +264,183 @@ export default function RecommendationsStep({ recommendations, isLoading = false
       
       {!isLoading && recommendations.length > 0 && (
         <div className="space-y-12">
-          {/* Check if all books have been read */}
-          {recommendations.every(book => isBookAlreadyRead(book)) ? (
-            <div className="text-center py-16 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-8 shadow-sm border border-primary/20">
-              <div className="h-20 w-20 mx-auto mb-4 text-primary/60">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-full h-full">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-primary">You've read all these books!</h3>
-              <p className="text-primary/80 mb-6">Great job! All the books we detected in your photo are already in your reading history. Try scanning a different bookshelf or ask friends for their recommendations.</p>
-              <Button 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => window.location.reload()}
-              >
-                Scan More Books
-              </Button>
-            </div>
-          ) : (
+          <div>
+            {/* New recommendations section */}
             <div>
-              {/* New recommendations section */}
-              <div>
-                <h3 className="text-xl font-semibold mb-4 text-primary-700">Recommended for You</h3>
-                <div className="grid grid-cols-1 gap-6">
-                  {recommendations
-                    .filter(book => !isBookAlreadyRead(book) && !book.isBookYouveRead)
-                    .map((book, index) => (
-                      <div 
-                        key={index} 
-                        className="bg-gray-100 dark:bg-gray-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={(e) => {
-                          const target = e.target as HTMLElement;
-                          if (target.closest('button') || target.closest('a')) {
-                            return;
-                          }
-                          setSelectedBook(book);
-                          setSelectedBookIndex(index);
-                          setDetailModalOpen(true);
-                        }}
-                      >
-                        <div className="md:flex">
-                          <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-slate-200 dark:border-slate-700">
-                            {book.coverUrl ? (
-                              <div className="relative">
-                                <img 
-                                  src={book.coverUrl} 
-                                  alt={book.title}
-                                  className="w-24 h-36 md:w-32 md:h-48 object-cover rounded-md shadow-sm"
-                                  onError={(e) => {
-                                    // If image fails to load, replace with a secure proxy URL or fallback
-                                    const target = e.target as HTMLImageElement;
-                                    // Try using a CORS proxy if the original URL fails
-                                    if (target.src === book.coverUrl) {
-                                      // Create a fallback URL that uses HTTPS
-                                      const fallbackUrl = book.coverUrl.replace('http://', 'https://');
-                                      target.src = fallbackUrl;
-                                    }
-                                  }}
-                                />
-                                <div className="absolute inset-0 rounded-md shadow-inner"></div>
-                              </div>
-                            ) : (
-                              <div className="w-24 h-36 md:w-32 md:h-48 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center rounded-md shadow-sm">
-                                <svg 
-                                  xmlns="http://www.w3.org/2000/svg" 
-                                  width="24" 
-                                  height="24" 
-                                  viewBox="0 0 24 24" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  strokeWidth="2" 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  className="h-8 w-8 text-slate-400"
-                                >
-                                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                </svg>
-                              </div>
-                            )}
-                            
-                            <div className="ml-5 md:ml-0 md:mt-4 md:text-center md:w-full flex flex-col md:items-center">
-                              <div className="mt-3 flex items-center">
-                                {renderRating(book.rating)}
-                              </div>
-                              
-                              {book.matchScore !== undefined && book.matchScore >= 60 && (
-                                <span className={`mt-2 text-xs font-medium px-2 py-0.5 rounded ${
-                                  book.matchScore >= 90 ? "bg-green-100 text-green-800" :
-                                  book.matchScore >= 76 ? "bg-blue-100 text-blue-800" :
-                                  book.matchScore >= 60 ? "bg-yellow-100 text-yellow-800" : ""
-                                }`}>
-                                  {book.matchScore >= 90 ? "Great match" : 
-                                   book.matchScore >= 76 ? "Good match" : 
-                                   book.matchScore >= 60 ? "Fair match" : ""}
-                                </span>
-                              )}
+              <h3 className="text-xl font-semibold mb-4 text-primary-700">Recommended for You</h3>
+              <div className="grid grid-cols-1 gap-6">
+                {recommendations
+                  .filter(book => !book.isBookYouveRead)
+                  .map((book, index) => (
+                    <div 
+                      key={index} 
+                      className="bg-gray-100 dark:bg-gray-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.closest('button') || target.closest('a')) {
+                          return;
+                        }
+                        setSelectedBook(book);
+                        setSelectedBookIndex(index);
+                        setDetailModalOpen(true);
+                      }}
+                    >
+                      <div className="md:flex">
+                        <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-slate-200 dark:border-slate-700">
+                          {book.coverUrl ? (
+                            <div className="relative">
+                              <img 
+                                src={book.coverUrl} 
+                                alt={book.title}
+                                className="w-24 h-36 md:w-32 md:h-48 object-cover rounded-md shadow-sm"
+                                onError={(e) => {
+                                  // If image fails to load, replace with a secure proxy URL or fallback
+                                  const target = e.target as HTMLImageElement;
+                                  // Try using a CORS proxy if the original URL fails
+                                  if (target.src === book.coverUrl) {
+                                    // Create a fallback URL that uses HTTPS
+                                    const fallbackUrl = book.coverUrl.replace('http://', 'https://');
+                                    target.src = fallbackUrl;
+                                  }
+                                }}
+                              />
+                              <div className="absolute inset-0 rounded-md shadow-inner"></div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="w-24 h-36 md:w-32 md:h-48 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center rounded-md shadow-sm">
+                              <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                width="24" 
+                                height="24" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                className="h-8 w-8 text-slate-400"
+                              >
+                                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+                              </svg>
+                            </div>
+                          )}
                           
-                          <div className="md:w-3/4 flex flex-col">
-                            <div className="p-5 pb-3">
-                              <h4 className="font-semibold text-black dark:text-white text-xl mb-1">{book.title}</h4>
-                              <p className="text-black dark:text-gray-300 text-sm mb-3">by {book.author}</p>
-                              
-                              {expandedBooks.includes(index) ? (
-                                <>
-                                  {/* Display match reason in second person format only when available */}
-                                  {book.matchReason && book.matchReason.trim() !== "" && book.matchReason !== "using fallback algo" && (
-                                    <div className="mt-2 mb-4 text-sm bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-3 rounded-md border border-primary/20 dark:border-primary/80">
-                                      <p className="text-primary font-medium mb-1">Why This Matches You:</p>
-                                      <p className="text-primary dark:text-primary-foreground/90">
-                                        {book.matchReason.replace(/the user's/gi, "your")
-                                          .replace(/user has/gi, "you have")
-                                          .replace(/user likes/gi, "you like")
-                                          .replace(/user enjoys/gi, "you enjoy")
-                                          .replace(/user is/gi, "you are")
-                                          .replace(/user will/gi, "you will")
-                                          .replace(/user/gi, "you")}
-                                      </p>
-                                    </div>
-                                  )}
-                                  <div className="text-sm text-black dark:text-gray-300">
-                                    {book.summary}
+                          <div className="ml-5 md:ml-0 md:mt-4 md:text-center md:w-full flex flex-col md:items-center">
+                            <div className="mt-3 flex items-center">
+                              {renderRating(book.rating)}
+                            </div>
+                            
+                            {book.matchScore !== undefined && book.matchScore >= 60 && (
+                              <span className={`mt-2 text-xs font-medium px-2 py-0.5 rounded ${
+                                book.matchScore >= 90 ? "bg-green-100 text-green-800" :
+                                book.matchScore >= 76 ? "bg-blue-100 text-blue-800" :
+                                book.matchScore >= 60 ? "bg-yellow-100 text-yellow-800" : ""
+                              }`}>
+                                {book.matchScore >= 90 ? "Great match" : 
+                                 book.matchScore >= 76 ? "Good match" : 
+                                 book.matchScore >= 60 ? "Fair match" : ""}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="md:w-3/4 flex flex-col">
+                          <div className="p-5 pb-3">
+                            <h4 className="font-semibold text-black dark:text-white text-xl mb-1">{book.title}</h4>
+                            <p className="text-black dark:text-gray-300 text-sm mb-3">by {book.author}</p>
+                            
+                            {expandedBooks.includes(index) ? (
+                              <>
+                                {/* Display match reason in second person format only when available */}
+                                {book.matchReason && book.matchReason.trim() !== "" && book.matchReason !== "using fallback algo" && (
+                                  <div className="mt-2 mb-4 text-sm bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-3 rounded-md border border-primary/20 dark:border-primary/80">
+                                    <p className="text-primary font-medium mb-1">Why This Matches You:</p>
+                                    <p className="text-primary dark:text-primary-foreground/90">
+                                      {book.matchReason.replace(/the user's/gi, "your")
+                                        .replace(/user has/gi, "you have")
+                                        .replace(/user likes/gi, "you like")
+                                        .replace(/user enjoys/gi, "you enjoy")
+                                        .replace(/user is/gi, "you are")
+                                        .replace(/user will/gi, "you will")
+                                        .replace(/user/gi, "you")}
+                                    </p>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="text-sm text-slate-500 dark:text-slate-400 italic line-clamp-1">
+                                )}
+                                <div className="text-sm text-black dark:text-gray-300">
                                   {book.summary}
                                 </div>
-                              )}
-
-                              <button 
-                                onClick={() => toggleExpand(index)}
-                                className="mt-3 text-primary hover:text-primary/80 text-sm flex items-center font-semibold transition-colors"
-                              >
-                                {expandedBooks.includes(index) ? (
-                                  <>
-                                    <ChevronUp className="h-4 w-4 mr-1" /> 
-                                    Hide Details
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-4 w-4 mr-1" /> 
-                                    Show Details
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                            
-                            <div className="mt-auto p-5 pt-3 border-t border-slate-200 dark:border-slate-700">
-                              <div className="flex justify-between gap-3">
-                                <button 
-                                  className={`
-                                    ${savedBookIds.includes(index) 
-                                      ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/40' 
-                                      : 'bg-white dark:bg-gray-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-300'} 
-                                    text-sm font-medium flex items-center px-3 py-1 rounded ${savingBookIds.includes(index) ? 'opacity-50 cursor-not-allowed' : ''}
-                                  `}
-                                  onClick={() => toggleBookSave(book, index)}
-                                  disabled={savingBookIds.includes(index)}
-                                >
-                                  {savingBookIds.includes(index) ? (
-                                    <svg className="animate-spin h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                  ) : (
-                                    <svg 
-                                      xmlns="http://www.w3.org/2000/svg" 
-                                      className="h-4 w-4 mr-1.5" 
-                                      fill={savedBookIds.includes(index) ? "currentColor" : "none"}
-                                      viewBox="0 0 24 24" 
-                                      stroke="currentColor"
-                                    >
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 3H7a2 2.5 0 0 0-2 2v16l7-3 7 3V5a2.5 2.5 0 0 0-2-2z" />
-                                    </svg>
-                                  )}
-                                  {savedBookIds.includes(index) ? 'Saved to List' : 'Save for Later'}
-                                </button>
-                                <a 
-                                  href={`https://www.amazon.com/s?k=${encodeURIComponent(book.title + ' ' + book.author)}&tag=gratitudedriv-20`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-amber-400 hover:bg-amber-500 text-black px-3 py-1 rounded text-sm font-medium"
-                                >
-                                  Buy on Amazon
-                                </a>
+                              </>
+                            ) : (
+                              <div className="text-sm text-slate-500 dark:text-slate-400 italic line-clamp-1">
+                                {book.summary}
                               </div>
+                            )}
+
+                            <button 
+                              onClick={() => toggleExpand(index)}
+                              className="mt-3 text-primary hover:text-primary/80 text-sm flex items-center font-semibold transition-colors"
+                            >
+                              {expandedBooks.includes(index) ? (
+                                <>
+                                  <ChevronUp className="h-4 w-4 mr-1" /> 
+                                  Hide Details
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-4 w-4 mr-1" /> 
+                                  Show Details
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          
+                          <div className="mt-auto p-5 pt-3 border-t border-slate-200 dark:border-slate-700">
+                            <div className="flex justify-between gap-3">
+                              <button 
+                                className={`
+                                  ${savedBookIds.includes(index) 
+                                    ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/40' 
+                                    : 'bg-white dark:bg-gray-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-300'} 
+                                  text-sm font-medium flex items-center px-3 py-1 rounded ${savingBookIds.includes(index) ? 'opacity-50 cursor-not-allowed' : ''}
+                                `}
+                                onClick={() => toggleBookSave(book, index)}
+                                disabled={savingBookIds.includes(index)}
+                              >
+                                {savingBookIds.includes(index) ? (
+                                  <svg className="animate-spin h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                ) : (
+                                  <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    className="h-4 w-4 mr-1.5" 
+                                    fill={savedBookIds.includes(index) ? "currentColor" : "none"}
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 3H7a2 2.5 0 0 0-2 2v16l7-3 7 3V5a2.5 2.5 0 0 0-2-2z" />
+                                  </svg>
+                                )}
+                                {savedBookIds.includes(index) ? 'Saved to List' : 'Save for Later'}
+                              </button>
+                              <a 
+                                href={`https://www.amazon.com/s?k=${encodeURIComponent(book.title + ' ' + book.author)}&tag=gratitudedriv-20`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-amber-400 hover:bg-amber-500 text-black px-3 py-1 rounded text-sm font-medium"
+                              >
+                                Buy on Amazon
+                              </a>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                </div>
+                    </div>
+                  ))}
               </div>
-              
-              {/* Books You've Already Read section */}
-              {goodreadsData && goodreadsData.length > 0 && recommendations.some(book => isBookAlreadyRead(book)) && (
-                <div className="mt-12">
-                  <h3 className="text-xl font-semibold mb-4 text-primary dark:text-primary-foreground">Books You've Already Read</h3>
-                  <p className="text-neutral-500 mb-4">
-                    We detected these books in your photo, but it looks like you've already read them according to your Goodreads data.
-                  </p>
-                  <div className="grid grid-cols-1 gap-6">
-                    {recommendations
-                      .filter(book => isBookAlreadyRead(book))
-                      .map((book, index) => (
-                        <div 
-                          key={`read-${index}`} 
-                          className="bg-primary/5 dark:bg-primary/10 border border-primary/15 dark:border-primary/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={(e) => {
-                            const target = e.target as HTMLElement;
-                            if (target.closest('button') || target.closest('a')) {
-                              return;
-                            }
-                            setSelectedBook(book);
-                            setSelectedBookIndex(index + 1000);
-                            setDetailModalOpen(true);
-                          }}
-                        >
-                          <div className="md:flex">
-                            <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-primary/15 dark:border-primary/50">
-                              {book.coverUrl ? (
-                                <div className="relative">
-                                  <img 
-                                    src={book.coverUrl} 
-                                    alt={book.title}
-                                    className="w-24 h-36 md:w-32 md:h-48 object-cover rounded-md shadow-sm"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      if (target.src === book.coverUrl) {
-                                        const fallbackUrl = book.coverUrl.replace('http://', 'https://');
-                                        target.src = fallbackUrl;
-                                      }
-                                    }}
-                                  />
-                                  <div className="absolute inset-0 rounded-md shadow-inner"></div>
-                                </div>
-                              ) : (
-                                <div className="w-24 h-36 md:w-32 md:h-48 bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 flex items-center justify-center rounded-md shadow-sm">
-                                  <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    width="24" 
-                                    height="24" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    className="h-8 w-8 text-primary/60"
-                                  >
-                                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                  </svg>
-                                </div>
-                              )}
-                              
-                              <div className="ml-5 md:ml-0 md:mt-4 md:text-center md:w-full flex flex-col md:items-center">
-                                <div className="mt-3 flex items-center">
-                                  {renderRating(book.rating)}
-                                </div>
-                                <span className="mt-2 text-xs font-medium px-2 py-0.5 rounded bg-primary/20 dark:bg-primary/30 text-primary dark:text-primary-foreground">
-                                  Already Read
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="md:w-3/4 flex flex-col">
-                              <div className="p-5 pb-3">
-                                <h4 className="font-semibold text-black dark:text-white text-xl mb-1">{book.title}</h4>
-                                <p className="text-black dark:text-gray-300 text-sm mb-3">by {book.author}</p>
-                                <div className="text-sm text-black dark:text-gray-300">
-                                  <p className={expandedBooks.includes(index + 1000) ? '' : 'line-clamp-3'}>
-                                    {book.summary}
-                                  </p>
-                                  {book.summary && book.summary.length > 240 && (
-                                    <button 
-                                      onClick={() => toggleExpand(index + 1000)}
-                                      className="mt-2 text-primary hover:text-primary/80 text-sm flex items-center font-medium"
-                                    >
-                                      {expandedBooks.includes(index + 1000) ? (
-                                        <>
-                                          <ChevronUp className="h-4 w-4 mr-1" /> 
-                                          Read Less
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ChevronDown className="h-4 w-4 mr-1" /> 
-                                          Read More
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 

@@ -2,7 +2,7 @@
 
 > Turn photos of your bookshelf into personalized reading recommendations.
 
-ScanShelf is an AI-powered bookshelf scanner and reading companion. By uploading or taking a picture of your physical bookshelf, ScanShelf automatically extracts book titles, enriches them with high-fidelity metadata (synopsis, ratings, authors), and compares them against your personal reading tastes (including importing Goodreads history) to generate matching scores and explanations.
+ScanShelf is an AI-powered bookshelf scanner and reading companion. By uploading or taking a picture of your physical bookshelf, ScanShelf automatically extracts book titles, enriches them with high-fidelity metadata (synopsis, ratings, authors), and compares them against your personal reading tastes to generate matching scores and explanations.
 
 Built with a gorgeous, high-fidelity **Sage Green & Cream design system**, ScanShelf features persistent scan histories, robust preference customization, and an immersive recommendation discovery loop.
 
@@ -17,7 +17,6 @@ Built with a gorgeous, high-fidelity **Sage Green & Cream design system**, ScanS
 
 ### 🧠 Personalized Recommendation Engine
 - **Preferences Dashboard**: Set your favorite genres, tags, and authors.
-- **Goodreads Integration**: Import your Goodreads history (CSV export) to prioritize matching recommendations.
 - **Match Explanations**: Every recommendation includes a percentage score and a custom explanation ("Why This Matches You").
 
 ### 📖 Immersive Book Details

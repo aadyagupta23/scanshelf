@@ -49,7 +49,6 @@ export const createMockPreferences = (overrides = {}) => ({
   userId: 1,
   genres: ['Fiction', 'Science Fiction'],
   authors: ['Isaac Asimov', 'Frank Herbert'],
-  goodreadsData: null,
   ...overrides
 });
 

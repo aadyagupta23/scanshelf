@@ -55,7 +55,6 @@ describe('Schema Validation', () => {
         deviceId: 'device123',
         genres: ['fiction', 'mystery'],
         authors: ['Author One', 'Author Two'],
-        goodreadsData: { userId: 123, books: [] },
       };
 
       const result: InsertPreference = insertPreferenceSchema.parse(validPreference);

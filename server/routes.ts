@@ -295,47 +295,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Check Goodreads data for highly rated books by same author or genre
-        if (preferences.goodreadsData && Array.isArray(preferences.goodreadsData)) {
-          for (const entry of preferences.goodreadsData) {
-            // Match author from Goodreads
-            if (entry["Author"] && book.author && 
-                entry["Author"].toLowerCase().includes(book.author.toLowerCase())) {
-              matchScore += 2;
-              
-              // Add bonus if it was highly rated
-              if (entry["My Rating"] && parseInt(entry["My Rating"]) >= 4) {
-                matchScore += 3;
-              }
-            }
-            
-            // Exact title match is a strong signal
-            if (entry["Title"] && entry["Title"].toLowerCase() === book.title.toLowerCase()) {
-              const rating = entry["My Rating"] ? parseInt(entry["My Rating"]) : 0;
-              if (rating >= 4) {
-                matchScore += 8; // You already read and liked this book!
-              } else if (rating > 0) {
-                matchScore += rating; // Score based on your rating
-              }
-            }
-            
-            // Match shelf categories from Goodreads
-            if (entry["Bookshelves"] && book.categories) {
-              const shelves = entry["Bookshelves"].split(';').map((s: string) => s.trim().toLowerCase());
-              for (const shelf of shelves) {
-                if (book.categories.some((category: string) => 
-                  category && category.toLowerCase().includes(shelf))) {
-                  matchScore += 1;
-                  
-                  // Add bonus if it was highly rated
-                  if (entry["My Rating"] && parseInt(entry["My Rating"]) >= 4) {
-                    matchScore += 2;
-                  }
-                }
-              }
-            }
-          }
-        }
         
         return {
           ...book,

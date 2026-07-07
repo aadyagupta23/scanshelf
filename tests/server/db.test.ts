@@ -148,16 +148,12 @@ describe('Database Operations', () => {
   });
 
   describe('Preferences Operations', () => {
-    it('should create preferences with genres and optional Goodreads data', () => {
+    it('should create preferences with genres and authors', () => {
       const preferencesData = {
         userId: 1,
         deviceId: 'test-device-123',
         genres: ['Fiction', 'Science Fiction'],
         authors: ['Isaac Asimov', 'Frank Herbert'],
-        goodreadsData: {
-          userId: 'goodreads123',
-          readBooks: ['Dune', 'Foundation']
-        }
       };
 
       const mockInsert = {
@@ -169,7 +165,6 @@ describe('Database Operations', () => {
 
       expect(preferencesData.genres).toHaveLength(2);
       expect(preferencesData.authors).toHaveLength(2);
-      expect(preferencesData.goodreadsData).toBeDefined();
     });
   });
 }); 

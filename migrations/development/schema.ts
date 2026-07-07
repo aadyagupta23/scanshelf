@@ -27,7 +27,6 @@ export const preferencesInDevelopment = development.table("preferences", {
 	deviceId: text("device_id").notNull(),
 	genres: text().array().notNull(),
 	authors: text().array(),
-	goodreadsData: jsonb("goodreads_data"),
 });
 
 export const savedBooksInDevelopment = development.table("saved_books", {

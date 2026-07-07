@@ -1,19 +1,15 @@
-import { useState, useEffect, ChangeEvent, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
 
 interface PreferencesStepProps {
   preferences: {
     genres: string[];
     authors: string[];
-    goodreadsData?: any;
   };
   onSubmit: (preferences: {
     genres: string[];
     authors: string[];
-    goodreadsData?: any;
   }) => void;
   isLoading: boolean;
 }
@@ -43,13 +39,10 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
   const [selectedGenres, setSelectedGenres] = useState<string[]>(preferences.genres || []);
   const [authors, setAuthors] = useState<string[]>(preferences.authors || []);
   const [newAuthor, setNewAuthor] = useState<string>('');
-  const [goodreadsData, setGoodreadsData] = useState<any>(preferences.goodreadsData || null);
-  const [uploading, setUploading] = useState<boolean>(false);
 
   useEffect(() => {
     setSelectedGenres(preferences.genres || []);
     setAuthors(preferences.authors || []);
-    setGoodreadsData(preferences.goodreadsData || null);
   }, [preferences]);
 
   const toggleGenre = (genre: string) => {
@@ -71,371 +64,79 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
     setAuthors(authors.filter(a => a !== author));
   };
 
-  const handleGoodreadsUpload = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {return;}
-
-    // Check if it's a CSV file
-    if (!file.name.endsWith('.csv')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a CSV file exported from Goodreads",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploading(true);
-
-    // Read file as text
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const csvText = event.target?.result as string;
-        const parsedData = parseGoodreadsCSV(csvText);
-        
-        // Extract favorite authors and genres from Goodreads data
-        const goodreadsAuthors = extractAuthors(parsedData);
-        const goodreadsGenres = extractGenres(parsedData);
-        
-        // Update states with extracted data
-        setAuthors(prev => {
-          // Create a combined array with all authors (previous and new)
-          const allAuthors = [...prev, ...goodreadsAuthors];
-          // Filter to only keep unique values
-          return allAuthors.filter((author, index) => 
-            allAuthors.indexOf(author) === index
-          );
-        });
-        
-        setSelectedGenres(prev => {
-          // Create a combined array with all genres (previous and new)
-          const allGenres = [...prev, ...goodreadsGenres];
-          // Filter to only keep unique values
-          return allGenres.filter((genre, index) => 
-            allGenres.indexOf(genre) === index
-          );
-        });
-        
-        // Store the raw parsed data
-        setGoodreadsData(parsedData);
-      } catch {
-        toast({
-          title: "Import failed",
-          description: "Failed to parse Goodreads CSV file. Please ensure it's a valid export.",
-          variant: "destructive"
-        });
-      } finally {
-        setUploading(false);
-      }
-    };
-    
-    reader.onerror = () => {
-      toast({
-        title: "Import failed",
-        description: "Failed to read the file. Please try again.",
-        variant: "destructive"
-      });
-      setUploading(false);
-    };
-    
-    reader.readAsText(file);
-  }, []);
-
-  // Advanced CSV parser for Goodreads data
-  const parseGoodreadsCSV = (csvText: string): any[] => {
-    try {
-      // Split into lines, being careful with Windows/Unix line endings
-      const lines = csvText.split(/\r?\n/);
-      if (lines.length === 0) {return [];}
-      
-      // Extract headers from first line
-      const headerLine = lines[0];
-      const headers = parseCSVLine(headerLine);
-      
-      const result = [];
-      
-      // Track indices for fields we care about to avoid repeatedly searching
-      const titleIndex = headers.indexOf('Title');
-      const authorIndex = headers.indexOf('Author');
-      const ratingIndex = headers.indexOf('My Rating');
-      const bookshelvesIndex = headers.indexOf('Bookshelves');
-      
-      // Process all lines (except header)
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) {continue;}
-        
-        // Parse this line, handling quotes and commas properly
-        const values = parseCSVLine(lines[i]);
-        if (values.length < headers.length) {continue;} // Malformed line
-        
-        // Create an entry with just the fields we need
-        const entry: Record<string, string> = {};
-        
-        if (titleIndex >= 0 && titleIndex < values.length) {
-          entry['Title'] = values[titleIndex].trim();
-        }
-        
-        if (authorIndex >= 0 && authorIndex < values.length) {
-          entry['Author'] = values[authorIndex].trim();
-        }
-        
-        if (ratingIndex >= 0 && ratingIndex < values.length) {
-          entry['My Rating'] = values[ratingIndex].trim();
-        }
-        
-        if (bookshelvesIndex >= 0 && bookshelvesIndex < values.length) {
-          entry['Bookshelves'] = values[bookshelvesIndex].trim();
-        }
-        
-        if (entry['Title']) { // Only require a title to include the book
-          result.push(entry);
-        }
-      }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Processed ${result.length} books from Goodreads data`);
-      }
-      return result;
-    } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
-          console.log("Error parsing CSV:", error);
-        }
-      return [];
-    }
-  };
-  
-  // Helper function to properly parse a CSV line with quoted values
-  const parseCSVLine = (line: string): string[] => {
-    const values = [];
-    let inQuote = false;
-    let currentValue = '';
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        // Toggle quote state, but check if it's an escaped quote
-        if (i + 1 < line.length && line[i + 1] === '"') {
-          // This is an escaped quote inside a quoted field
-          currentValue += '"';
-          i++; // Skip the next quote
-        } else {
-          // Toggle quote state
-          inQuote = !inQuote;
-        }
-      } else if (char === ',' && !inQuote) {
-        // End of value
-        values.push(currentValue);
-        currentValue = '';
-      } else {
-        // Regular character
-        currentValue += char;
-      }
-    }
-    
-    // Add the last value
-    values.push(currentValue);
-    
-    return values;
-  };
-
-  // Extract authors from Goodreads data using a weighted approach
-  const extractAuthors = (data: any[]): string[] => {
-    // Create a map to track author statistics
-    const authorStats: Record<string, { count: number; totalRating: number; avgRating: number }> = {};
-    
-    // Process each book in the data
-    data.forEach(item => {
-      const author = item['Author'];
-      const rating = item['My Rating'] ? parseInt(item['My Rating']) : 0;
-      
-      if (author) {
-        // Initialize if this is the first book by this author
-        if (!authorStats[author]) {
-          authorStats[author] = { count: 0, totalRating: 0, avgRating: 0 };
-        }
-        
-        // Increment count and add rating
-        authorStats[author].count += 1;
-        authorStats[author].totalRating += rating;
-        
-        // Calculate average rating
-        authorStats[author].avgRating = authorStats[author].totalRating / authorStats[author].count;
-      }
-    });
-    
-    // Convert to array for sorting
-    const authors = Object.keys(authorStats).map(author => ({
-      name: author,
-      count: authorStats[author].count,
-      avgRating: authorStats[author].avgRating,
-      // Calculate a score that weights both quantity read and quality of ratings
-      // This formula prioritizes authors with multiple highly-rated books
-      score: authorStats[author].count * (authorStats[author].avgRating / 5) * 10
-    }));
-    
-    // Sort by score (highest first)
-    authors.sort((a, b) => b.score - a.score);
-    
-    // Only include authors with at least one book rated 4+ or multiple books
-    const qualifiedAuthors = authors.filter(author => 
-      author.avgRating >= 4 || author.count >= 2
-    );
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Top authors from Goodreads:", qualifiedAuthors.slice(0, 10));
-    }
-    
-    // Return names of top 10 authors
-    return qualifiedAuthors.slice(0, 10).map(author => author.name);
-  };
-
-  // Extract genres from Goodreads data
-  const extractGenres = (data: any[]): string[] => {
-    const genreMap: Record<string, number> = {};
-    
-    data.forEach(item => {
-      if (item['Bookshelves'] && item['My Rating'] && parseInt(item['My Rating']) >= 4) {
-        // Split the bookshelves string into individual shelves
-        let shelves: string[] = [];
-        if (typeof item['Bookshelves'] === 'string') {
-          shelves = item['Bookshelves'].split(';').map((s: string) => s.trim());
-        }
-        
-        // Process each shelf
-        shelves.forEach((shelf: string) => {
-          // Convert shelf names to match our genre list
-          const genre = mapShelfToGenre(shelf);
-          if (genre && allGenres.includes(genre)) {
-            genreMap[genre] = (genreMap[genre] || 0) + 1;
-          }
-        });
-      }
-    });
-    
-    // Sort genres by frequency and return top 5
-    const sortedGenres = Object.keys(genreMap).sort(
-      (a, b) => (genreMap[b] || 0) - (genreMap[a] || 0)
-    );
-    
-    return sortedGenres.slice(0, 5); // Return top 5 genres
-  };
-
-  // Map Goodreads shelves to our genre list
-  const mapShelfToGenre = (shelf: string): string | null => {
-    shelf = shelf.toLowerCase();
-    
-    // Handle Science Fiction first to avoid confusion with Science
-    if (shelf.includes('sci-fi') || shelf.includes('scifi') || shelf.includes('science-fiction') || shelf.includes('science_fiction')) {
-      return 'Science Fiction';
-    }
-    
-    // Direct matches
-    for (const genre of allGenres) {
-      if (shelf.includes(genre.toLowerCase())) {
-        return genre;
-      }
-    }
-    
-    // Common mappings (put Science after Science Fiction check)
-    if (shelf.includes('ya') || shelf.includes('young-adult')) {return 'Young Adult';}
-    if (shelf.includes('biograph')) {return 'Biography';}
-    if (shelf.includes('historic')) {return 'History';}
-    if (shelf.includes('classic')) {return 'Classics';}
-    if (shelf.includes('comic') || shelf.includes('graphic')) {return 'Comics';}
-    if (shelf.includes('business') || shelf.includes('finance')) {return 'Business';}
-    
-    // Be more specific about Science - only match pure science terms, not science fiction
-    if (shelf === 'science' || shelf.includes('physics') || shelf.includes('chemistry') || 
-        shelf.includes('biology') || shelf.includes('mathematics') || shelf.includes('technology') ||
-        shelf === 'tech' || shelf.includes('engineering') || shelf.includes('popular-science') ||
-        shelf.includes('popular_science')) {
-      return 'Science';
-    }
-    
-    return null;
-  };
-
   const handleSubmit = () => {
     onSubmit({
       genres: selectedGenres,
-      authors,
-      goodreadsData
+      authors
     });
   };
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Tell us about your reading preferences</h2>
-        <p className="text-gray-600 dark:text-gray-300">Select genres that interest you to help us provide better recommendations.</p>
-      </div>
-
-      <div className="mb-8">
-        <Label className="block mb-2 font-medium text-gray-900 dark:text-white">Select your favorite genres</Label>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {allGenres.map((genre) => {
-            const isSelected = selectedGenres.includes(genre);
-            return (
-              <button
-                key={genre}
-                type="button"
-                onClick={() => toggleGenre(genre)}
-                className={`h-10 px-4 text-sm border rounded-md flex items-center justify-between transition-colors ${
-                  isSelected
-                    ? 'bg-primary border-primary text-primary-foreground font-medium shadow-sm'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <span>{genre}</span>
-                {isSelected && (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary-foreground shrink-0 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
+        <Label className="text-base font-semibold text-gray-950 dark:text-gray-50 mb-3 block">
+          Select Your Favorite Genres
+        </Label>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          Choose at least one genre to help tailor recommendations to your taste.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {allGenres.map((genre) => (
+            <button
+              key={genre}
+              onClick={() => toggleGenre(genre)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
+                selectedGenres.includes(genre)
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : "bg-background border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/80"
+              }`}
+            >
+              {genre}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="mb-8">
-        <Label htmlFor="author-input" className="block mb-2 font-medium text-gray-900 dark:text-white">Add favorite authors (optional)</Label>
-        <div className="flex gap-3">
+        <Label className="text-base font-semibold text-gray-950 dark:text-gray-50 mb-3 block">
+          Favorite Authors
+        </Label>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          Add specific authors whose writing styles you love.
+        </p>
+        
+        <div className="flex gap-2 max-w-md mb-4">
           <input
-            id="author-input"
             type="text"
             value={newAuthor}
             onChange={(e) => setNewAuthor(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addAuthor()}
-            className="flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="Type an author's name"
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addAuthor())}
+            placeholder="e.g. Stephen King"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
-          <Button
-            type="button"
+          <Button 
             onClick={addAuthor}
-            variant="outline"
-            className="border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+            type="button"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
           >
             Add
           </Button>
         </div>
-        
+
         {authors.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {authors.map(author => (
-              <div key={author} className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-sm flex items-center">
-                {author}
+          <div className="flex flex-wrap gap-2">
+            {authors.map((author) => (
+              <div 
+                key={author}
+                className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1 text-sm text-gray-800 dark:text-gray-200"
+              >
+                <span>{author}</span>
                 <button
-                  type="button"
                   onClick={() => removeAuthor(author)}
-                  className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                 >
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
                     viewBox="0 0 24 24" 
                     fill="none" 
                     stroke="currentColor" 
@@ -452,65 +153,6 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
             ))}
           </div>
         )}
-      </div>
-      
-      <div className="mb-8">
-        <Card className="p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-          <div className="mb-2">
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">Import your Goodreads library (Optional)</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Upload your Goodreads export to quickly set your preferences based on your reading history.</p>
-            
-            {/* Download link and desktop notice */}
-            <div className="mt-3 p-3 bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20 dark:border-primary/80">
-              <div className="flex items-start gap-2">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="text-sm">
-                  <p className="text-primary dark:text-primary-foreground font-medium mb-1">Need your Goodreads data?</p>
-                  <p className="text-primary dark:text-primary-foreground mb-2">
-                    <a 
-                      href="https://www.goodreads.com/review/import" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="underline hover:text-primary/90 dark:hover:text-primary-foreground font-medium"
-                    >
-                      Download your library here →
-                    </a>
-                  </p>
-                  <p className="text-primary dark:text-primary-foreground/70 text-xs">
-                    📱 Goodreads data can only be downloaded from desktop, sorry for the inconvenience &lt;3
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-3">
-            <label className="inline-block">
-              <span className="sr-only">Choose file</span>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={handleGoodreadsUpload}
-                className="block w-full text-sm text-gray-500 dark:text-gray-400
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-medium
-                  file:bg-primary/10 file:text-primary
-                  dark:file:bg-primary/20 dark:file:text-primary-foreground
-                  hover:file:bg-primary/20 dark:hover:file:bg-primary/30"
-              />
-            </label>
-            {uploading && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Processing your file...</p>}
-            {goodreadsData && <p className="mt-2 text-sm text-primary">✓ Goodreads data imported successfully!</p>}
-          </div>
-        </Card>
       </div>
       
       <div className="flex justify-end">
