@@ -746,9 +746,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get saved books for a device
   app.get('/api/saved-books', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from cookie
-      const deviceId = req.cookies.deviceId || '';
-      log(`GetSavedBooks - Retrieved device ID from cookie: ${deviceId}`);
+      // Extract deviceId from request, cookie, or query parameters
+      const deviceId = req.deviceId || req.cookies.deviceId || req.query.deviceId as string || '';
+      log(`GetSavedBooks - Retrieved device ID: ${deviceId}`);
       
       // Validate deviceId
       if (!deviceId) {
@@ -803,8 +803,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save a book
   app.post('/api/saved-books', async (req: Request, res: Response) => {
     try {
-      // Extract deviceId from cookie
-      const deviceId = req.cookies.deviceId || '';
+      // Extract deviceId from request, cookie, query, or body parameters
+      const deviceId = req.deviceId || req.cookies.deviceId || req.query.deviceId as string || req.body.deviceId || '';
       
       // Validate deviceId
       if (!deviceId) {

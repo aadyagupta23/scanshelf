@@ -375,20 +375,28 @@ export default function PreferencesStep({ preferences, onSubmit, isLoading }: Pr
       <div className="mb-8">
         <Label className="block mb-2 font-medium text-gray-900 dark:text-white">Select your favorite genres</Label>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {allGenres.map((genre) => (
-            <button
-              key={genre}
-              type="button"
-              onClick={() => toggleGenre(genre)}
-              className={`h-10 px-4 text-sm border rounded-md text-left transition-colors ${
-                selectedGenres.includes(genre)
-                  ? 'bg-primary/10 border-primary text-primary dark:bg-primary/20 dark:border-primary/80 dark:text-primary-foreground'
-                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              {genre}
-            </button>
-          ))}
+          {allGenres.map((genre) => {
+            const isSelected = selectedGenres.includes(genre);
+            return (
+              <button
+                key={genre}
+                type="button"
+                onClick={() => toggleGenre(genre)}
+                className={`h-10 px-4 text-sm border rounded-md flex items-center justify-between transition-colors ${
+                  isSelected
+                    ? 'bg-primary border-primary text-primary-foreground font-medium shadow-sm'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <span>{genre}</span>
+                {isSelected && (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary-foreground shrink-0 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -22,54 +22,52 @@ export default function SavedBooks() {
   const [expandedBooks, setExpandedBooks] = useState<number[]>([]);
   const [_deviceId, setDeviceId] = useState<string | null>(null);
 
+  // Fetch saved books helper
+  const fetchSavedBooks = async () => {
+    try {
+      setIsLoading(true);
+      setError(null); // Clear any previous errors
+      
+      // Use the fetch API with credentials included
+      const response = await fetch('/api/saved-books', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch books: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        setSavedBooks(data);
+      } else if (data && data.books && Array.isArray(data.books)) {
+        setSavedBooks(data.books);
+        setDeviceId(data.deviceId);
+      } else {
+        setSavedBooks([]);
+      }
+    } catch (err) {
+      console.log("Error fetching saved books:", err);
+      setError("Failed to load your reading list. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch saved books when component mounts
   useEffect(() => {
-    const fetchSavedBooks = async () => {
-      try {
-        setIsLoading(true);
-        setError(null); // Clear any previous errors
-        
-        // Use the fetch API with credentials included
-        const response = await fetch('/api/saved-books', {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch books: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data && data.books && Array.isArray(data.books)) {
-          setSavedBooks(data.books);
-          setDeviceId(data.deviceId);
-        } else {
-          setSavedBooks([]);
-        }
-      } catch (err) {
-        console.log("Error fetching saved books:", err);
-        setError("Failed to load your reading list. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchSavedBooks();
   }, []);
 
   // Function to remove a book from saved list
   const removeBook = async (id: number) => {
     try {
-      // Get deviceId from cookies
-      const deviceId = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('deviceId='))
-        ?.split('=')[1];
-        
-      const response = await fetch(`/api/saved-books?bookId=${id}&deviceId=${deviceId}`, {
+      setError(null);
+      const response = await fetch(`/api/saved-books/${id}`, {
         method: 'DELETE',
       });
       
@@ -108,13 +106,20 @@ export default function SavedBooks() {
 
 
 
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-md mb-6" role="alert">
-            <p>{error}</p>
+        {error ? (
+          <div className="text-center py-16 bg-red-50/50 dark:bg-red-950/10 rounded-lg p-8 border border-red-200 dark:border-red-800/40 max-w-xl mx-auto shadow-sm">
+            <div className="h-12 w-12 mx-auto mb-4 text-red-500 dark:text-red-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Failed to load Reading List</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+            <Button onClick={fetchSavedBooks} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              Retry
+            </Button>
           </div>
-        )}
-
-        {isLoading ? (
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
               <Card key={i} className="overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">

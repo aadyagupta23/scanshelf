@@ -3,8 +3,33 @@ import { log } from "./simple-logger.js";
 import { rateLimiter } from "./rate-limiter.js";
 import { analyzeImage } from "./vision.js"; // Tesseract OCR fallback
 
-// This flag allows easier turning on/off of the AI API
 const ENABLE_AI = process.env.ENABLE_GROQ !== "false";
+
+function extractJsonObject(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      const jsonStr = text.substring(start, end + 1);
+      try {
+        return JSON.parse(jsonStr);
+      } catch {
+        const cleaned = jsonStr
+          .replace(/\\n/g, ' ')
+          .replace(/\n/g, ' ')
+          .trim();
+        try {
+          return JSON.parse(cleaned);
+        } catch {
+          throw new Error("Could not parse JSON object from response");
+        }
+      }
+    }
+    throw new Error("No JSON object found in response");
+  }
+}
 
 /**
  * Main function to analyze a bookshelf image and identify book titles
@@ -43,9 +68,8 @@ export async function analyzeBookshelfImage(base64Image: string): Promise<{
           image: base64Image
         });
 
-        const content = (response.choices[0].message.content || '').trim();
-        const cleanContent = content.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
-        const result = JSON.parse(cleanContent);
+        const content = response.choices[0].message.content || '';
+        const result = extractJsonObject(content);
         
         log(`Native Vision model identified ${result.bookTitles?.length || 0} books directly from image`, "vision");
         
@@ -109,7 +133,7 @@ export async function analyzeBookshelfImage(base64Image: string): Promise<{
     let result;
 
     try {
-      result = JSON.parse(content);
+      result = extractJsonObject(content);
     } catch (error) {
       log(`Error parsing Groq response: ${error}`, "vision");
       // Fallback to basic OCR extraction if JSON parsing fails

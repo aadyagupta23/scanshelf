@@ -1,6 +1,5 @@
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "../ui/ThemeToggle";
-import { useState } from "react";
 
 interface NavbarProps {
   sidebarOpen: boolean;

@@ -145,9 +145,9 @@ export default function Books() {
 
   // Generate recommendations using direct Gemini integration for high-quality descriptions
   const recommendationsMutation = useMutation({
-    mutationFn: async () => {
-      if (!detectedBooks || detectedBooks.length === 0) {
-        // If no books were detected, don't make the API call at all
+    mutationFn: async (booksToRecommend: Book[]) => {
+      if (!booksToRecommend || booksToRecommend.length === 0) {
+        // If no books were provided, don't make the API call at all
         console.log("No books to send for recommendations");
         return [];
       }
@@ -156,9 +156,9 @@ export default function Books() {
       // This includes genres, authors, and goodreadsData that were collected in the preferences step
       
       // Include the detected books and preferences in the request
-      console.log("Sending books for Gemini recommendations:", detectedBooks.length);
+      console.log("Sending books for Gemini recommendations:", booksToRecommend.length);
       const response = await apiRequest('POST', '/api/direct/recommendations', {
-        books: detectedBooks,
+        books: booksToRecommend,
         preferences: userPreferences
       });
       const data = await response.json();
@@ -263,7 +263,11 @@ export default function Books() {
               }`}
               onClick={() => setCurrentStep(1)}
               >
-                1
+                {currentStep > 1 ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : "1"}
               </div>
               <div className={`relative flex items-center justify-center w-10 h-10 rounded-full z-10 cursor-pointer transition-colors ${
                 currentStep >= 2 
@@ -272,7 +276,11 @@ export default function Books() {
               }`}
               onClick={() => currentStep >= 2 ? setCurrentStep(2) : null}
               >
-                2
+                {currentStep > 2 ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : "2"}
               </div>
               <div className={`relative flex items-center justify-center w-10 h-10 rounded-full z-10 cursor-pointer transition-colors ${
                 currentStep >= 3 
@@ -310,13 +318,13 @@ export default function Books() {
                 onBooksDetected={handleBooksDetected}
                 detectedBooks={detectedBooks}
                 onReset={handleReset}
-                onGetRecommendations={() => {
-                  if (detectedBooks.length > 0) {
-                    recommendationsMutation.mutate();
+                onGetRecommendations={(selectedBooks) => {
+                  if (selectedBooks.length > 0) {
+                    recommendationsMutation.mutate(selectedBooks);
                   } else {
                     toast({
                       title: "No books selected",
-                      description: "Please scan some books before getting recommendations.",
+                      description: "Please select some books before getting recommendations.",
                       variant: "destructive"
                     });
                   }

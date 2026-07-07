@@ -105,13 +105,7 @@ export default function RecommendationsStep({ recommendations, isLoading = false
         );
         
         if (bookToRemove) {
-          // Get deviceId from cookies
-          const deviceId = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('deviceId='))
-            ?.split('=')[1];
-            
-          const deleteResponse = await fetch(`/api/saved-books?bookId=${bookToRemove.id}&deviceId=${deviceId}`, {
+          const deleteResponse = await fetch(`/api/saved-books/${bookToRemove.id}`, {
             method: 'DELETE'
           } as RequestInit);
           
@@ -388,44 +382,49 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                               <h4 className="font-semibold text-black dark:text-white text-xl mb-1">{book.title}</h4>
                               <p className="text-black dark:text-gray-300 text-sm mb-3">by {book.author}</p>
                               
-                              {/* Display match reason in second person format only when available */}
-                              {book.matchReason && book.matchReason.trim() !== "" && book.matchReason !== "using fallback algo" && (
-                                <div className="mt-2 mb-3 text-sm bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-3 rounded-md border border-primary/20 dark:border-primary/80">
-                                  <p className="text-primary font-medium mb-1">Why This Matches You:</p>
-                                  <p className="text-primary dark:text-primary-foreground/90">
-                                    {book.matchReason.replace(/the user's/gi, "your")
-                                      .replace(/user has/gi, "you have")
-                                      .replace(/user likes/gi, "you like")
-                                      .replace(/user enjoys/gi, "you enjoy")
-                                      .replace(/user is/gi, "you are")
-                                      .replace(/user will/gi, "you will")
-                                      .replace(/user/gi, "you")}
-                                  </p>
+                              {expandedBooks.includes(index) ? (
+                                <>
+                                  {/* Display match reason in second person format only when available */}
+                                  {book.matchReason && book.matchReason.trim() !== "" && book.matchReason !== "using fallback algo" && (
+                                    <div className="mt-2 mb-4 text-sm bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-3 rounded-md border border-primary/20 dark:border-primary/80">
+                                      <p className="text-primary font-medium mb-1">Why This Matches You:</p>
+                                      <p className="text-primary dark:text-primary-foreground/90">
+                                        {book.matchReason.replace(/the user's/gi, "your")
+                                          .replace(/user has/gi, "you have")
+                                          .replace(/user likes/gi, "you like")
+                                          .replace(/user enjoys/gi, "you enjoy")
+                                          .replace(/user is/gi, "you are")
+                                          .replace(/user will/gi, "you will")
+                                          .replace(/user/gi, "you")}
+                                      </p>
+                                    </div>
+                                  )}
+                                  <div className="text-sm text-black dark:text-gray-300">
+                                    {book.summary}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-sm text-slate-500 dark:text-slate-400 italic line-clamp-1">
+                                  {book.summary}
                                 </div>
                               )}
-                              <div className="text-sm text-black dark:text-gray-300">
-                                <p className={expandedBooks.includes(index) ? '' : 'line-clamp-3'}>
-                                  {book.summary}
-                                </p>
-                                {book.summary && book.summary.length > 240 && (
-                                  <button 
-                                    onClick={() => toggleExpand(index)}
-                                    className="mt-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm flex items-center font-medium"
-                                  >
-                                    {expandedBooks.includes(index) ? (
-                                      <>
-                                        <ChevronUp className="h-4 w-4 mr-1" /> 
-                                        Read Less
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ChevronDown className="h-4 w-4 mr-1" /> 
-                                        Read More
-                                      </>
-                                    )}
-                                  </button>
+
+                              <button 
+                                onClick={() => toggleExpand(index)}
+                                className="mt-3 text-primary hover:text-primary/80 text-sm flex items-center font-semibold transition-colors"
+                              >
+                                {expandedBooks.includes(index) ? (
+                                  <>
+                                    <ChevronUp className="h-4 w-4 mr-1" /> 
+                                    Hide Details
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-4 w-4 mr-1" /> 
+                                    Show Details
+                                  </>
                                 )}
-                              </div>
+                              </button>
                             </div>
                             
                             <div className="mt-auto p-5 pt-3 border-t border-slate-200 dark:border-slate-700">

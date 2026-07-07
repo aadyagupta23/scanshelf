@@ -123,17 +123,22 @@ async function callGroq(messages: any[], model: string, apiKey: string, isJson: 
 // Helper utilities
 function extractJsonArray(text: string): any[] | null {
   const start = text.indexOf("[");
-  if (start === -1) return null;
+  if (start === -1) {
+    return null;
+  }
   
   let depth = 0;
   for (let i = start; i < text.length; i++) {
-    if (text[i] === "[") depth++;
-    else if (text[i] === "]") {
+    if (text[i] === "[") {
+      depth++;
+    } else if (text[i] === "]") {
       depth--;
       if (depth === 0) {
         try {
           const parsed = JSON.parse(text.substring(start, i + 1));
-          if (Array.isArray(parsed)) return parsed;
+          if (Array.isArray(parsed)) {
+            return parsed;
+          }
         } catch {
           // ignore
         }
@@ -162,7 +167,35 @@ function runLocalHeuristics(messages: any[]): string {
     
     for (const w of words) {
       const clean = w.replace(/[^a-zA-Z0-9\s]/g, "").trim();
-      if (!clean || clean.includes("response") || clean.includes("json") || clean.includes("object") || clean.includes("field") || clean.includes("important")) {
+      const lowerClean = clean.toLowerCase();
+      if (
+        !clean || 
+        lowerClean.includes("response") || 
+        lowerClean.includes("json") || 
+        lowerClean.includes("object") || 
+        lowerClean.includes("field") || 
+        lowerClean.includes("important") ||
+        lowerClean.includes("wrap") ||
+        lowerClean.includes("markdown") ||
+        lowerClean.includes("code") ||
+        lowerClean.includes("block") ||
+        lowerClean.includes("system") ||
+        lowerClean.includes("user") ||
+        lowerClean.includes("expert") ||
+        lowerClean.includes("identify") ||
+        lowerClean.includes("visible") ||
+        lowerClean.includes("shelf") ||
+        lowerClean.includes("bookshelf") ||
+        lowerClean.includes("image") ||
+        lowerClean.includes("analyze") ||
+        lowerClean.includes("spine") ||
+        lowerClean.includes("title") ||
+        lowerClean.includes("precise") ||
+        lowerClean.includes("expert") ||
+        lowerClean.includes("specializ") ||
+        lowerClean.includes("invent") ||
+        lowerClean.includes("guess")
+      ) {
         continue;
       }
       const wordCount = clean.split(/\s+/).length;
@@ -180,7 +213,7 @@ function runLocalHeuristics(messages: any[]): string {
   // Book description and match reasons
   if (prompt.includes("description") || prompt.includes("summarize") || prompt.includes("rating")) {
     const matchTitle = prompt.match(/book\s+"([^"]+)"/i) || prompt.match(/summarize\s+the\s+book\s+"([^"]+)"/i);
-    const title = matchTitle ? matchTitle[1] : "this book";
+    const _title = matchTitle ? matchTitle[1] : "this book";
     const authorMatch = prompt.match(/by\s+([^.\n]+)/i);
     const author = authorMatch ? authorMatch[1].trim() : "Unknown Author";
 

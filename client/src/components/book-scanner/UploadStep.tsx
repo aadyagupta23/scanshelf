@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LoaderPinwheel, Camera, X, RotateCcw } from "lucide-react";
+import { LoaderPinwheel, Camera, X, RotateCcw, Check, BookOpen } from "lucide-react";
 
 interface Book {
   id?: number;
@@ -15,9 +15,18 @@ interface Book {
 interface UploadStepProps {
   onBooksDetected: (books: Book[], imageBase64: string) => void;
   detectedBooks: Book[];
-  onGetRecommendations?: () => void;
+  onGetRecommendations?: (selectedBooks: Book[]) => void;
   onReset?: () => void;
   isLoading?: boolean;
+}
+
+function cleanAuthors(authorStr: string): string {
+  if (!authorStr) {
+    return "Unknown Author";
+  }
+  const parts = authorStr.split(',').map(p => p.trim());
+  const uniqueParts = Array.from(new Set(parts));
+  return uniqueParts.join(', ');
 }
 
 export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecommendations, onReset, isLoading = false }: UploadStepProps) {
@@ -32,6 +41,21 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
+
+  // Track selection of books
+  const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
+
+  useEffect(() => {
+    setSelectedIndexes(detectedBooks.map((_, i) => i));
+  }, [detectedBooks]);
+
+  const toggleSelect = (index: number) => {
+    setSelectedIndexes(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index) 
+        : [...prev, index]
+    );
+  };
 
   // Check if device is mobile on component mount
   useEffect(() => {
@@ -535,10 +559,24 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
                 <p className="text-gray-600 dark:text-gray-300">Uploading image...</p>
               </div>
             ) : isProcessing ? (
-              <div className="py-12 flex flex-col items-center">
-                 <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
-                 <p className="text-primary font-medium mb-1">Analyzing your books</p>
-                <p className="text-gray-600 dark:text-gray-300">This may take a moment...</p>
+              <div className="py-8 w-full flex flex-col items-center">
+                <p className="text-primary font-semibold text-center mb-6 animate-pulse flex items-center justify-center gap-2 text-lg">
+                  <LoaderPinwheel className="h-5 w-5 animate-spin text-primary" />
+                  Analyzing bookshelf image...
+                </p>
+                
+                {/* Skeleton Book Shelf */}
+                <div className="border-b-8 border-primary dark:border-primary/80 w-full max-w-md flex items-end justify-center gap-3 px-4 h-40 bg-gray-50/50 dark:bg-gray-900/40 rounded-t-lg">
+                  <div className="w-6 bg-primary/20 dark:bg-primary/30 rounded-t h-28 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-8 bg-primary/30 dark:bg-primary/45 rounded-t h-32 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-7 bg-primary/20 dark:bg-primary/25 rounded-t h-24 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-9 bg-primary/35 dark:bg-primary/45 rounded-t h-36 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-5 bg-primary/25 dark:bg-primary/30 rounded-t h-26 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-8 bg-primary/30 dark:bg-primary/40 rounded-t h-34 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-6 bg-primary/20 dark:bg-primary/25 rounded-t h-20 animate-pulse border-r border-t border-primary/10"></div>
+                  <div className="w-7 bg-primary/35 dark:bg-primary/45 rounded-t h-30 animate-pulse border-r border-t border-primary/10"></div>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm text-center mt-4">Detecting titles and layout structure...</p>
               </div>
             ) : (
               <div className="relative w-full">
@@ -565,66 +603,106 @@ export default function UploadStep({ onBooksDetected, detectedBooks, onGetRecomm
       ) : (
         <>
           <div className="mb-6">
-            <h3 className="font-medium text-lg text-gray-900 dark:text-white mb-2">
-              Detected Books ({detectedBooks.length})
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                Detected Books ({detectedBooks.length})
+              </h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Click any card to select or deselect
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {detectedBooks.map((book, index) => (
-                <div 
-                  key={index}
-                  className="border rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm border-gray-200 dark:border-gray-700"
-                >
-                  <div className="p-4 flex">
-                    {book.coverUrl ? (
-                      <img 
-                        src={book.coverUrl} 
-                        alt={book.title}
-                        className="w-16 h-24 object-cover rounded"
-                        onError={(e) => {
-                          // If image fails to load, replace with placeholder
-                          (e.target as HTMLImageElement).src = 'https://placehold.co/80x120?text=No+Cover';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-16 h-24 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded text-gray-400 dark:text-gray-500">
-                        No Cover
+              {detectedBooks.map((book, index) => {
+                const isSelected = selectedIndexes.includes(index);
+                const cleanAuthor = cleanAuthors(book.author);
+                
+                return (
+                  <div 
+                    key={index}
+                    onClick={() => toggleSelect(index)}
+                    className={`border rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm transition-all relative cursor-pointer select-none ${
+                      isSelected
+                        ? 'border-primary/50 dark:border-primary/80 ring-1 ring-primary/20'
+                        : 'border-gray-200 dark:border-gray-800 opacity-60 bg-gray-50/50 dark:bg-gray-900/30'
+                    }`}
+                  >
+                    {/* Checkbox overlay button */}
+                    <div 
+                      className={`absolute top-2 right-2 p-1 rounded-full border transition-all z-10 ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-white dark:bg-gray-700 text-gray-400 border-gray-200 dark:border-gray-600'
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </div>
+
+                    <div className="p-4 flex pr-10">
+                      {book.coverUrl ? (
+                        <img 
+                          src={book.coverUrl} 
+                          alt={book.title}
+                          className="w-16 h-24 object-cover rounded shadow-sm shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://placehold.co/80x120?text=No+Cover';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-16 h-24 bg-sage-50 dark:bg-sage-950/20 border border-sage-200/50 dark:border-sage-800/40 flex flex-col items-center justify-center rounded text-sage-600 dark:text-sage-400 shadow-inner shrink-0">
+                          <BookOpen className="h-6 w-6 mb-1 opacity-80" />
+                          <span className="text-[9px] uppercase tracking-wider font-semibold opacity-70">Spine</span>
+                        </div>
+                      )}
+                      <div className="ml-3 flex-1 overflow-hidden">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">{book.title}</h4>
+                        <p className="text-gray-600 dark:text-gray-300 text-xs mt-1 truncate">{cleanAuthor}</p>
                       </div>
-                    )}
-                    <div className="ml-3">
-                      <h4 className="font-medium text-gray-900 dark:text-white">{book.title}</h4>
-                      <p className="text-gray-600 dark:text-gray-300 text-sm">{book.author}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {onGetRecommendations && (
-              <div className="mt-6 flex justify-between gap-4">
+              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-100 dark:border-gray-700 pt-6">
                 {onReset && (
                   <Button 
                     onClick={onReset}
                     variant="outline"
-                    className="border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
+                    className="border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
                   >
                     Scan Another Photo
                   </Button>
                 )}
-                <Button 
-                  onClick={onGetRecommendations} 
-                  disabled={isLoading}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground ml-auto"
-                >
-                  {isLoading ? (
-                    <>
-                      <LoaderPinwheel className="mr-2 h-4 w-4 animate-spin" />
-                      Getting recommendations...
-                    </>
-                  ) : (
-                    'Get Recommendations'
-                  )}
-                </Button>
+                
+                <div className="flex items-center gap-4 ml-auto w-full sm:w-auto justify-end">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {selectedIndexes.length} of {detectedBooks.length} books selected
+                  </span>
+                  
+                  <Button 
+                    onClick={() => {
+                      if (isLoading) {
+                        return;
+                      }
+                      onGetRecommendations(detectedBooks.filter((_, i) => selectedIndexes.includes(i)));
+                    }} 
+                    disabled={selectedIndexes.length === 0}
+                    className={`bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-5 ${
+                      isLoading ? 'cursor-wait opacity-90' : ''
+                    }`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <LoaderPinwheel className="mr-2 h-4 w-4 animate-spin text-white" />
+                        Getting recommendations...
+                      </>
+                    ) : (
+                      'Get Recommendations'
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
