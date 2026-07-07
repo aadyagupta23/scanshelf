@@ -142,3 +142,58 @@ export async function getGeminiBookSummary(title: string, author: string): Promi
     return `"${title}" by ${author} is a book that could not be summarized at this time due to technical limitations.`;
   }
 }
+
+/**
+ * Gets similar books using Groq AI's knowledge
+ */
+export async function getSimilarBooks(title: string, author: string): Promise<Array<{ title: string; author: string }>> {
+  try {
+    if (!isGroqConfigured()) {
+      return [
+        { title: "The Great Gatsby", author: "F. Scott Fitzgerald" },
+        { title: "To Kill a Mockingbird", author: "Harper Lee" },
+        { title: "1984", author: "George Orwell" }
+      ];
+    }
+
+    if (!(await rateLimiter.checkAndIncrement('groq'))) {
+      log("Rate limit reached for Groq, returning fallback similar books", "groq");
+      return [
+        { title: "The Great Gatsby", author: "F. Scott Fitzgerald" },
+        { title: "To Kill a Mockingbird", author: "Harper Lee" }
+      ];
+    }
+
+    log(`Getting similar books for: "${title}" by ${author}`, "groq");
+
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "You are a literary expert. For any book provided, suggest exactly 3 similar books. Respond ONLY with a JSON array of objects, where each object has keys 'title' and 'author'. Do not write any other explanation or text."
+        },
+        {
+          role: "user",
+          content: `Suggest 3 books similar to "${title}" by ${author}.`
+        }
+      ],
+      temperature: 0.6,
+      max_tokens: 150
+    });
+
+    const content = response.choices[0].message.content?.trim() || "[]";
+    const startIdx = content.indexOf("[");
+    const endIdx = content.lastIndexOf("]") + 1;
+    
+    if (startIdx !== -1 && endIdx !== -1) {
+      const jsonStr = content.slice(startIdx, endIdx);
+      return JSON.parse(jsonStr);
+    }
+    
+    return [];
+  } catch (error) {
+    log(`Error getting similar books: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}

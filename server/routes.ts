@@ -7,7 +7,7 @@ import { searchEnhancedBooks } from "./enhanced-book-api.js";
 import { bookCacheService } from "./book-cache-service.js";
 import { bookEnhancer } from "./book-enhancer.js";
 import { getGeminiBookDetails } from "./gemini-books.js";
-import { getGeminiBookRating, getGeminiBookSummary } from "./utils/gemini-utils.js";
+import { getGeminiBookRating, getGeminiBookSummary, getSimilarBooks } from "./utils/gemini-utils.js";
 import multer from "multer";
 import { insertPreferenceSchema, insertSavedBookSchema } from "../shared/schema.js";
 import { getApiUsageStats } from "./api-stats.js";
@@ -122,6 +122,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       log(`Error getting book details: ${error instanceof Error ? error.message : String(error)}`, "error");
       res.status(500).json({ message: "Error retrieving book details" });
+    }
+  });
+  
+  // Get similar books based on title and author
+  app.get('/api/books/similar', async (req: Request, res: Response) => {
+    try {
+      const { title, author } = req.query;
+      
+      if (!title || typeof title !== 'string' || !author || typeof author !== 'string') {
+        return res.status(400).json({ message: "Both title and author parameters are required" });
+      }
+      
+      log(`GET /api/books/similar - Searching similar books for "${title}" by ${author}`);
+      const similar = await getSimilarBooks(title, author);
+      res.json(similar);
+    } catch (error) {
+      log(`Error getting similar books: ${error instanceof Error ? error.message : String(error)}`, 'error');
+      res.status(500).json({ message: "Error retrieving similar books" });
     }
   });
   
@@ -988,7 +1006,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all scan sessions for a device
   app.get('/api/scan-sessions', async (req: Request, res: Response) => {
     try {
-      const deviceId = req.deviceId || req.cookies.deviceId || req.query.deviceId as string || '';
+      // Extract deviceId from query, request, or cookie parameters
+      const deviceId = req.query.deviceId as string || req.deviceId || req.cookies.deviceId || '';
       
       if (!deviceId) {
         return res.status(400).json({ message: 'Device ID is required' });

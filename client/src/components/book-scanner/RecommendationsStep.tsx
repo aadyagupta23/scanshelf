@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import StarRating from "@/components/ui/star-rating";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import BookDetailModal from "@/components/ui/BookDetailModal";
 
 interface Recommendation {
   id?: number;
@@ -32,6 +33,10 @@ export default function RecommendationsStep({ recommendations, isLoading = false
   const [expandedBooks, setExpandedBooks] = useState<number[]>([]);
   const { toast } = useToast();
   
+  const [selectedBook, setSelectedBook] = useState<Recommendation | null>(null);
+  const [selectedBookIndex, setSelectedBookIndex] = useState<number | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+
   // Toggle expanded state of a book description
   const toggleExpand = (id: number) => {
     setExpandedBooks(prev => 
@@ -316,7 +321,16 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                     .map((book, index) => (
                       <div 
                         key={index} 
-                        className="bg-gray-100 dark:bg-gray-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                        className="bg-gray-100 dark:bg-gray-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target.closest('button') || target.closest('a')) {
+                            return;
+                          }
+                          setSelectedBook(book);
+                          setSelectedBookIndex(index);
+                          setDetailModalOpen(true);
+                        }}
                       >
                         <div className="md:flex">
                           <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-slate-200 dark:border-slate-700">
@@ -487,7 +501,16 @@ export default function RecommendationsStep({ recommendations, isLoading = false
                       .map((book, index) => (
                         <div 
                           key={`read-${index}`} 
-                          className="bg-primary/5 dark:bg-primary/10 border border-primary/15 dark:border-primary/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                          className="bg-primary/5 dark:bg-primary/10 border border-primary/15 dark:border-primary/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.closest('button') || target.closest('a')) {
+                              return;
+                            }
+                            setSelectedBook(book);
+                            setSelectedBookIndex(index + 1000);
+                            setDetailModalOpen(true);
+                          }}
                         >
                           <div className="md:flex">
                             <div className="p-5 flex md:flex-col md:items-center md:w-1/4 md:border-r border-primary/15 dark:border-primary/50">
@@ -575,6 +598,19 @@ export default function RecommendationsStep({ recommendations, isLoading = false
           )}
         </div>
       )}
+
+      <BookDetailModal
+        book={selectedBook}
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setSelectedBook(null);
+          setSelectedBookIndex(null);
+        }}
+        isSaved={selectedBookIndex !== null ? savedBookIds.includes(selectedBookIndex) : false}
+        isSaving={selectedBookIndex !== null ? savingBookIds.includes(selectedBookIndex) : false}
+        onToggleSave={() => selectedBook && selectedBookIndex !== null && toggleBookSave(selectedBook, selectedBookIndex)}
+      />
     </div>
   );
 }
