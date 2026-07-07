@@ -1,43 +1,42 @@
-# 📚 ScanShelf
+# ScanShelf
 
 > Turn photos of your bookshelf into personalized reading recommendations.
 
 ScanShelf is an AI-powered bookshelf scanner and reading companion. By uploading or taking a picture of your physical bookshelf, ScanShelf automatically extracts book titles, enriches them with high-fidelity metadata (synopsis, ratings, authors), and compares them against your personal reading tastes (including importing Goodreads history) to generate matching scores and explanations.
 
-Built with a gorgeous, high-fidelity **Sage Green & Cream design system**, ScanShelf features persistent scan histories, robust preference customization, and an immersive recommendation discovery loop.
+ScanShelf features persistent scan histories, robust preference customization, and an immersive recommendation discovery loop.
 
 ---
 
-## ✨ Core Features
+## Core Features
 
-### 🔍 AI Bookshelf Scanner
+### AI Bookshelf Scanner
 - **Local OCR Engine**: Extracts visible spine text locally via Tesseract.js.
 - **AI Refinement**: Corrects and maps raw OCR text to verified titles, authors, and cover art using Gemini/Groq completions.
 - **Fallback Resilience**: Works seamlessly with local OCR fallback if AI APIs are rate-limited or unavailable.
 
-### 🧠 Personalized Recommendation Engine
+### Personalized Recommendation Engine
 - **Preferences Dashboard**: Set your favorite genres, tags, and authors.
-- **Goodreads Integration**: Import your Goodreads history (CSV export) to prioritize matching recommendations.
-- **Match Explanations**: Every recommendation includes a percentage score and a custom explanation ("Why This Matches You").
+- **Match Explanations**: Every recommendation includes a score and a custom explanation ("Why This Matches You").
 
-### 📖 Immersive Book Details
+### Immersive Book Details
 - **Detailed Modal View**: Explore full synopses and matching rationales.
 - **On-Demand Similar Books**: Suggests 3 similar books using Groq.
 - **Infinite Discovery**: Click any suggested book to load its details inline and continue finding new reads.
 - **Quick CTAs**: Quick links to **Buy on Amazon** or **Save for Later** to add titles to your Reading List.
 
-### 🕒 Persistent Scan History
+### Persistent Scan History
 - **Database Synced**: Automatically records scans into the `scan_sessions` PostgreSQL table.
 - **Session Restoration**: Shows a summary thumbnail collage of past scans. Click any past scan to reload the stepper and re-view recommendation results.
 
-### ⚙️ Settings & Exporter
+### Settings & Exporter
 - **Theme Selection**: Toggle between Light Mode (cream accents) and Dark Mode (dark forest green).
 - **Notification Preferences**: Local-storage persisted configuration switches.
 - **JSON Data Backup**: One-click download of all reading lists, scan history, and device metadata.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: React, TypeScript, Vite, TailwindCSS, Radix UI (Dialog, Accordion)
 - **Backend**: Node.js, Express, TypeScript, Multer
@@ -49,7 +48,7 @@ Built with a gorgeous, high-fidelity **Sage Green & Cream design system**, ScanS
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Install Dependencies
 ```bash
@@ -60,6 +59,7 @@ npm install
 Create a `.env` file in the root directory:
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/scanshelf
+GEMINI_API_KEY=your_gemini_key_here
 GROQ_API_KEY=your_groq_api_key_here
 ENABLE_GROQ=true
 PORT=5000
@@ -77,33 +77,7 @@ npm run dev
 ```
 The application will be served at `http://localhost:5000` (Express Backend proxied to Vite Frontend).
 
----
-
-## 📂 Project Directory Structure
-
-```yaml
-scanshelf/
-├── client/                 # React frontend application
-│   ├── src/
-│   │   ├── components/     # UI widgets and layout modules
-│   │   │   ├── book-scanner/  # Recommendations & Stepper logic
-│   │   │   └── ui/         # Radix / Shadcn components (BookDetailModal, Dialog, etc.)
-│   │   ├── contexts/       # ThemeContext, DeviceContext
-│   │   ├── pages/          # Router pages (books, settings, history, reading list)
-│   │   └── lib/            # Utilities (DeviceId syncing, fetch queries)
-├── server/                 # Express backend application
-│   ├── utils/              # AI helpers (gemini-utils, book-utils)
-│   ├── routes.ts           # REST API Route registration
-│   ├── storage.ts          # Database and caching layer
-│   └── index.ts            # Entrypoint
-├── shared/                 # Database Schemas & Types
-│   └── schema.ts           # Drizzle table schemas
-└── migrations/             # Automatically generated SQL migrations
-```
-
----
-
-## 🧪 Testing & Verification
+## Testing & Verification
 
 Run checks and verify components:
 ```bash
